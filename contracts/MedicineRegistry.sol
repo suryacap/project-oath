@@ -1,18 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract MedicineRegistry {
-    struct Medicine {
-        string medicineName;
-        string batchNo;
-        uint mfgDate;
-        uint expDate;
-        uint quantity;
-        address manufacturer;
-        bool isAuthentic;
-    }
+import "./Medicine.sol";
 
-    mapping(string => Medicine) public medicines; // Mapping from batchNo to Medicine
+contract MedicineRegistry {
+    mapping(string => address) public medicines; // Mapping from medicine name to Medicine contract address
+    mapping(string => address) public batches; // Mapping from batchNo to contract address
+    mapping(address => bool) public registeredMedicines; // Track registered medicine contracts
     address public manufacturer;
 
     constructor() {
@@ -28,30 +22,69 @@ contract MedicineRegistry {
         manufacturer = _manufacturer;
     }
 
-    function addMedicine(
-        string memory _medicineName,
-        string memory _batchNo,
-        uint _mfgDate,
-        uint _expDate,
-        uint _quantity
-    ) public onlyManufacturer {
-        medicines[_batchNo] = Medicine({
-            medicineName: _medicineName,
-            batchNo: _batchNo,
-            mfgDate: _mfgDate,
-            expDate: _expDate,
-            quantity: _quantity,
-            manufacturer: msg.sender,
-            isAuthentic: true
-        });
+    function createMedicine(
+        string memory _medicineName
+    ) public onlyManufacturer returns (address) {
+        require(medicines[_medicineName] == address(0), "Medicine with this name already exists");
+        
+        Medicine newMedicine = new Medicine(
+            _medicineName, msg.sender);
+        
+        medicines[_medicineName] = address(newMedicine);
+        registeredMedicines[address(newMedicine)] = true;
+        
+        return address(newMedicine);
     }
 
     function updateMedicineQuantity(string memory _batchNo, uint _quantity) public onlyManufacturer {
-        require(medicines[_batchNo].manufacturer == msg.sender, "Not the manufacturer");
-        medicines[_batchNo].quantity = _quantity;
+        address medicineAddress = medicines[_batchNo];
+        require(medicineAddress != address(0), "Medicine does not exist");
+        require(registeredMedicines[medicineAddress], "Medicine not registered");
+        
+        Medicine medicine = Medicine(medicineAddress);
+        medicine.updateQuantity(_batchNo, _quantity);
     }
 
     function verifyMedicine(string memory _batchNo) public view returns (bool) {
-        return medicines[_batchNo].isAuthentic;
+        address medicineAddress = medicines[_batchNo];
+        if (medicineAddress == address(0) || !registeredMedicines[medicineAddress]) {
+            return false;
+        }
+        
+        Medicine medicine = Medicine(medicineAddress);
+        return medicine.verifyBatch(_batchNo);
+    }
+
+    function getMedicineContract(string memory _batchNo) public view returns (address) {
+        return medicines[_batchNo];
+    }
+
+    function getMedicineData(string memory _batchNo) public view returns (
+        string memory medicineName,
+        string memory batchNo,
+        uint mfgDate,
+        uint expDate,
+        uint quantity,
+        address _manufacturer,
+        bool isAuthentic,
+        bool exists
+    ) {
+        address medicineAddress = medicines[_batchNo];
+        require(medicineAddress != address(0), "Medicine does not exist");
+        require(registeredMedicines[medicineAddress], "Medicine not registered");
+        
+        Medicine medicine = Medicine(medicineAddress);
+        Medicine.MedicineData memory data = medicine.getBatchData(_batchNo);
+        
+        return (
+            medicine.medicineName(),
+            data.batchNo,
+            data.mfgDate,
+            data.expDate,
+            data.quantity,
+            manufacturer,
+            data.isAuthentic,
+            data.exists
+        );
     }
 }

@@ -7,6 +7,7 @@ import "./PrescriptionRegistry.sol";
 
 contract OathRegistry {
     mapping(address => bool) public manufacturers;
+    mapping(address => address) public medicineRegistries;
     
     address public admin;
     
@@ -30,6 +31,7 @@ contract OathRegistry {
         
         // Deploy new MedicineRegistry for this manufacturer
         MedicineRegistry newRegistry = new MedicineRegistry();
+        medicineRegistries[_manufacturerAddress] = address(newRegistry);
         
         // Set the manufacturer in the new registry
         newRegistry.setManufacturer(_manufacturerAddress);
