@@ -1417,10 +1417,16 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
   const [verificationResult, setVerificationResult] = useState<any>(null);
   const [dispenseData, setDispenseData] = useState({
     batchId: '',
+    prescriptionId: '',
     patientWallet: '',
-    doctorEns: ''
+    doctorWallet: '',
+    quantity: ''
   });
+  const [isDispensing, setIsDispensing] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   // Set up global profile handler
   React.useEffect(() => {
@@ -1430,32 +1436,111 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
     };
   }, []);
 
+  const handleDirectWalletConnect = async () => {
+    setIsConnecting(true);
+    setConnectionError(null);
+    
+    try {
+      // Add timeout to prevent infinite loading
+      const connectionPromise = contractService.connectWallet();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout. Please try again.')), 30000)
+      );
+      
+      const address = await Promise.race([connectionPromise, timeoutPromise]) as string;
+      
+      // Check if user is on the correct network
+      const network = await contractService.getNetwork();
+      if (network.chainId !== 11155111) { // Sepolia chain ID
+        await contractService.switchToSepolia();
+      }
+      
+      await Promise.all([
+        contractService.isManufacturer(address),
+        contractService.isPharmacy(address),
+        contractService.isDoctor(address)
+      ]);
+
+      setConnectedAddress(address);
+    } catch (error: any) {
+      console.error('Error connecting wallet:', error);
+      setConnectionError(error.message || 'Failed to connect wallet. Please make sure MetaMask is installed and unlocked.');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
   const handleVerify = async () => {
     if (!batchId.trim()) return;
     
     setIsVerifying(true);
     setVerificationResult(null);
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    const batch = DUMMY_DATA.batches.find(b => b.id === batchId);
-    setVerificationResult(batch || { status: 'Not Found' });
-    setIsVerifying(false);
+    try {
+      // Use the contract service to verify the drug
+      const isValid = await contractService.verifyDrug(batchId);
+      
+      if (isValid) {
+        // Get batch details
+        const batchDetails = await contractService.getBatch(batchId);
+        setVerificationResult({
+          status: 'Verified',
+          id: batchDetails.batchId,
+          name: batchDetails.medicineName,
+          manufacturer: 'Verified Manufacturer',
+          quantity: batchDetails.quantity,
+          date: new Date(batchDetails.manufacturingDate * 1000).toLocaleDateString(),
+          expiry: new Date(batchDetails.expiryDate * 1000).toLocaleDateString()
+        });
+      } else {
+        setVerificationResult({ status: 'Not Found' });
+      }
+    } catch (error: any) {
+      console.error('Verification error:', error);
+      setVerificationResult({ status: 'Error', message: error.message });
+    } finally {
+      setIsVerifying(false);
+    }
   };
 
   const handleDispense = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Simulate blockchain transaction
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    if (!dispenseData.batchId || !dispenseData.prescriptionId || !dispenseData.patientWallet || !dispenseData.doctorWallet || !dispenseData.quantity) {
+      alert('Please fill in all fields');
+      return;
+    }
     
-    alert('✓ Custody transfer logged on OATH Ledger\n✓ Patient ENS notified\n✓ Transaction hash: 0x' + Math.random().toString(16).slice(2, 18));
+    setIsDispensing(true);
     
-    // Reset form
-    setBatchId('');
-    setVerificationResult(null);
-    setDispenseData({ batchId: '', patientWallet: '', doctorEns: '' });
+    try {
+      // Use the contract service to dispense the drug
+      const tx = await contractService.dispenseDrug(
+        dispenseData.batchId,
+        dispenseData.prescriptionId,
+        dispenseData.patientWallet,
+        dispenseData.doctorWallet,
+        parseInt(dispenseData.quantity)
+      );
+      
+      // Wait for transaction confirmation
+      const receipt = await tx.wait();
+      
+      if (receipt) {
+        alert(`✓ Drug dispensed successfully!\n✓ Transaction Hash: ${receipt.hash}\n✓ Patient notified`);
+      } else {
+        alert('✓ Drug dispensed successfully!\n✓ Transaction completed\n✓ Patient notified');
+      }
+      
+      // Reset form
+      setDispenseData({ batchId: '', prescriptionId: '', patientWallet: '', doctorWallet: '', quantity: '' });
+      setVerificationResult(null);
+    } catch (error: any) {
+      console.error('Dispense error:', error);
+      alert(`Failed to dispense drug: ${error.message}`);
+    } finally {
+      setIsDispensing(false);
+    }
   };
 
   const VerificationStatus = () => {
@@ -1513,119 +1598,202 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
       <Header title="Pharmacy Portal" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
       
       <div className="max-w-7xl mx-auto p-4 sm:p-8">
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Drug Verification */}
-          <div className="bg-white p-8 rounded-2xl shadow-xl">
-            <div className="flex items-center mb-6">
-              <Search className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
-              <div>
-                <h2 className="text-2xl font-bold" style={{ color: THEME.PRIMARY }}>Drug Verification</h2>
-                <p className="text-gray-600">Verify authenticity against blockchain</p>
-              </div>
+        {!connectedAddress ? (
+          <div className="max-w-2xl mx-auto">
+            <div className="text-center mb-8">
+              <Building2 className="w-16 h-16 mx-auto mb-4 text-blue-600" />
+              <h2 className="text-3xl font-bold text-gray-800 mb-4">Pharmacy Portal</h2>
+              <p className="text-lg text-gray-600 mb-8">
+                Connect your wallet to access drug verification and dispensing features.
+              </p>
             </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Batch ID</label>
-                <input
-                  type="text"
-                  placeholder="Scan QR code or enter Batch ID"
-                  value={batchId}
-                  onChange={(e) => {
-                    setBatchId(e.target.value);
-                    setVerificationResult(null);
-                  }}
-                  className="w-full p-4 text-lg border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
-                  style={{ 
-                    borderColor: THEME.SECONDARY
-                  }}
-                />
+            
+            <div className="bg-white rounded-2xl shadow-xl p-8">
+              <div className="text-center mb-6">
+                <Wallet className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">Connect Your Wallet</h3>
+                <p className="text-gray-600">Connect to Sepolia testnet to access pharmacy features</p>
               </div>
               
+              {connectionError && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center">
+                    <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
+                    <span className="text-red-700 text-sm">{connectionError}</span>
+                  </div>
+                </div>
+              )}
+              
               <button
-                onClick={handleVerify}
-                disabled={!batchId.trim() || isVerifying}
-                className="w-full py-4 font-bold text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                style={{ backgroundColor: THEME.PRIMARY }}
+                onClick={handleDirectWalletConnect}
+                disabled={isConnecting}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-4 px-6 rounded-lg transition-colors flex items-center justify-center"
               >
-                {isVerifying ? (
+                {isConnecting ? (
                   <>
-                    <div className="animate-spin w-5 h-5 mr-3 border-2 border-white border-t-transparent rounded-full"></div>
-                    Verifying...
+                    <div className="animate-spin w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                    Connecting...
                   </>
                 ) : (
                   <>
-                    <Shield className="w-5 h-5 mr-3" />
-                    Verify Authenticity
+                    <Wallet className="w-5 h-5 mr-2" />
+                    Connect Wallet
                   </>
                 )}
               </button>
             </div>
-
-            <VerificationStatus />
           </div>
-
-          {/* Dispense Drug */}
-          <div className="bg-white p-8 rounded-2xl shadow-xl">
-            <div className="flex items-center mb-6">
-              <Pill className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
-              <div>
-                <h2 className="text-2xl font-bold" style={{ color: THEME.PRIMARY }}>Dispense Drug</h2>
-                <p className="text-gray-600">Transfer custody to patient</p>
+        ) : (
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Drug Verification */}
+            <div className="bg-white p-8 rounded-2xl shadow-xl">
+              <div className="flex items-center mb-6">
+                <Search className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
+                <div>
+                  <h2 className="text-2xl font-bold" style={{ color: THEME.PRIMARY }}>Drug Verification</h2>
+                  <p className="text-gray-600">Verify authenticity against blockchain</p>
+                </div>
               </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Batch ID</label>
+                  <input
+                    type="text"
+                    placeholder="Scan QR code or enter Batch ID"
+                    value={batchId}
+                    onChange={(e) => {
+                      setBatchId(e.target.value);
+                      setVerificationResult(null);
+                    }}
+                    className="w-full p-4 text-lg border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
+                    style={{ 
+                      borderColor: THEME.SECONDARY
+                    }}
+                  />
+                </div>
+                
+                <button
+                  onClick={handleVerify}
+                  disabled={!batchId.trim() || isVerifying}
+                  className="w-full py-4 font-bold text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  style={{ backgroundColor: THEME.PRIMARY }}
+                >
+                  {isVerifying ? (
+                    <>
+                      <div className="animate-spin w-5 h-5 mr-3 border-2 border-white border-t-transparent rounded-full"></div>
+                      Verifying...
+                    </>
+                  ) : (
+                    <>
+                      <Shield className="w-5 h-5 mr-3" />
+                      Verify Authenticity
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <VerificationStatus />
             </div>
 
-            <form onSubmit={handleDispense} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Verified Batch ID</label>
-                <input
-                  type="text"
-                  placeholder="Must be verified first"
-                  value={dispenseData.batchId}
-                  onChange={(e) => setDispenseData(prev => ({...prev, batchId: e.target.value}))}
-                  className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
-                  style={{ borderColor: THEME.PRIMARY }}
-                  required
-                />
+            {/* Dispense Drug */}
+            <div className="bg-white p-8 rounded-2xl shadow-xl">
+              <div className="flex items-center mb-6">
+                <Pill className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
+                <div>
+                  <h2 className="text-2xl font-bold" style={{ color: THEME.PRIMARY }}>Dispense Drug</h2>
+                  <p className="text-gray-600">Transfer custody to patient</p>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Patient Wallet / ENS</label>
-                <input
-                  type="text"
-                  placeholder="0x742d...A9c8 or patient.eth"
-                  value={dispenseData.patientWallet}
-                  onChange={(e) => setDispenseData(prev => ({...prev, patientWallet: e.target.value}))}
-                  className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
-                  style={{ borderColor: THEME.PRIMARY }}
-                  required
-                />
-              </div>
+              <form onSubmit={handleDispense} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Verified Batch ID</label>
+                  <input
+                    type="text"
+                    placeholder="Must be verified first"
+                    value={dispenseData.batchId}
+                    onChange={(e) => setDispenseData(prev => ({...prev, batchId: e.target.value}))}
+                    className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
+                    style={{ borderColor: THEME.PRIMARY }}
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Prescribing Doctor ENS</label>
-                <input
-                  type="text"
-                  placeholder="dr.smith.eth (for audit trail)"
-                  value={dispenseData.doctorEns}
-                  onChange={(e) => setDispenseData(prev => ({...prev, doctorEns: e.target.value}))}
-                  className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
-                  style={{ borderColor: THEME.PRIMARY }}
-                  required
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Prescription ID</label>
+                  <input
+                    type="text"
+                    placeholder="Enter prescription ID"
+                    value={dispenseData.prescriptionId}
+                    onChange={(e) => setDispenseData(prev => ({...prev, prescriptionId: e.target.value}))}
+                    className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
+                    style={{ borderColor: THEME.PRIMARY }}
+                    required
+                  />
+                </div>
 
-              <button
-                type="submit"
-                className="w-full py-4 font-bold text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] flex items-center justify-center"
-                style={{ backgroundColor: THEME.SECONDARY }}
-              >
-                <Package className="w-5 h-5 mr-3" />
-                Finalize Transfer & Log Transaction
-              </button>
-            </form>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Patient Wallet Address</label>
+                  <input
+                    type="text"
+                    placeholder="0x742d...A9c8"
+                    value={dispenseData.patientWallet}
+                    onChange={(e) => setDispenseData(prev => ({...prev, patientWallet: e.target.value}))}
+                    className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
+                    style={{ borderColor: THEME.PRIMARY }}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Doctor Wallet Address</label>
+                  <input
+                    type="text"
+                    placeholder="0x1234...5678"
+                    value={dispenseData.doctorWallet}
+                    onChange={(e) => setDispenseData(prev => ({...prev, doctorWallet: e.target.value}))}
+                    className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
+                    style={{ borderColor: THEME.PRIMARY }}
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
+                  <input
+                    type="number"
+                    placeholder="Enter quantity to dispense"
+                    value={dispenseData.quantity}
+                    onChange={(e) => setDispenseData(prev => ({...prev, quantity: e.target.value}))}
+                    className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
+                    style={{ borderColor: THEME.PRIMARY }}
+                    required
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isDispensing}
+                  className="w-full py-4 font-bold text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  style={{ backgroundColor: THEME.SECONDARY }}
+                >
+                  {isDispensing ? (
+                    <>
+                      <div className="animate-spin w-5 h-5 mr-3 border-2 border-white border-t-transparent rounded-full"></div>
+                      Dispensing...
+                    </>
+                  ) : (
+                    <>
+                      <Package className="w-5 h-5 mr-3" />
+                      Dispense Drug
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {showProfile && (
