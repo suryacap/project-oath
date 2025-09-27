@@ -1427,6 +1427,7 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [dispenseResult, setDispenseResult] = useState<{ transactionHash: string } | null>(null);
 
   // Set up global profile handler
   React.useEffect(() => {
@@ -1515,7 +1516,7 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
     
     try {
       // Use the contract service to dispense the drug
-      const tx = await contractService.dispenseDrug(
+      const result = await contractService.dispenseDrug(
         dispenseData.batchId,
         dispenseData.prescriptionId,
         dispenseData.patientWallet,
@@ -1523,14 +1524,8 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
         parseInt(dispenseData.quantity)
       );
       
-      // Wait for transaction confirmation
-      const receipt = await tx.wait();
-      
-      if (receipt) {
-        alert(`✓ Drug dispensed successfully!\n✓ Transaction Hash: ${receipt.hash}\n✓ Patient notified`);
-      } else {
-        alert('✓ Drug dispensed successfully!\n✓ Transaction completed\n✓ Patient notified');
-      }
+      // Set dispense result to show in UI
+      setDispenseResult(result);
       
       // Reset form
       setDispenseData({ batchId: '', prescriptionId: '', patientWallet: '', doctorWallet: '', quantity: '' });
@@ -1592,6 +1587,56 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
       </div>
     );
   };
+
+  const DispenseSuccessModal = ({ result, onClose }: { result: { transactionHash: string }; onClose: () => void }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+        <div className="p-8">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: THEME.SUCCESS + '20' }}>
+              <Package className="w-8 h-8" style={{ color: THEME.SUCCESS }} />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">Drug Dispensed Successfully!</h3>
+            <p className="text-gray-600">The drug has been transferred to the patient</p>
+          </div>
+
+          <div className="space-y-4 mb-6">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-600">Transaction Hash:</span>
+                <button
+                  onClick={() => navigator.clipboard.writeText(String(result.transactionHash))}
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  Copy
+                </button>
+              </div>
+              <p className="font-mono text-sm text-gray-800 break-all">{String(result.transactionHash)}</p>
+            </div>
+          </div>
+
+          <div className="flex space-x-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+            >
+              Close
+            </button>
+            <button
+              onClick={() => {
+                const url = `https://sepolia.etherscan.io/tx/${String(result.transactionHash)}`;
+                window.open(url, '_blank');
+              }}
+              className="flex-1 py-3 px-4 font-medium text-white rounded-lg transition-colors"
+              style={{ backgroundColor: THEME.PRIMARY }}
+            >
+              View on Etherscan
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -1803,6 +1848,13 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
           onClose={() => setShowProfile(false)}
         />
       )}
+
+      {dispenseResult && (
+        <DispenseSuccessModal
+          result={dispenseResult}
+          onClose={() => setDispenseResult(null)}
+        />
+      )}
     </div>
   );
 };
@@ -1914,26 +1966,26 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-600">Prescription ID:</span>
                 <button
-                  onClick={() => navigator.clipboard.writeText(result.prescriptionId)}
+                  onClick={() => navigator.clipboard.writeText(String(result.prescriptionId))}
                   className="text-xs text-blue-600 hover:text-blue-800"
                 >
                   Copy
                 </button>
               </div>
-              <p className="font-mono text-sm text-gray-800 break-all">{result.prescriptionId}</p>
+              <p className="font-mono text-sm text-gray-800 break-all">{String(result.prescriptionId)}</p>
             </div>
 
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-600">Transaction Hash:</span>
                 <button
-                  onClick={() => navigator.clipboard.writeText(result.transactionHash)}
+                  onClick={() => navigator.clipboard.writeText(String(result.transactionHash))}
                   className="text-xs text-blue-600 hover:text-blue-800"
                 >
                   Copy
                 </button>
               </div>
-              <p className="font-mono text-sm text-gray-800 break-all">{result.transactionHash}</p>
+              <p className="font-mono text-sm text-gray-800 break-all">{String(result.transactionHash)}</p>
             </div>
           </div>
 
@@ -1946,7 +1998,7 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
             </button>
             <button
               onClick={() => {
-                const url = `https://sepolia.etherscan.io/tx/${result.transactionHash}`;
+                const url = `https://sepolia.etherscan.io/tx/${String(result.transactionHash)}`;
                 window.open(url, '_blank');
               }}
               className="flex-1 py-3 px-4 font-medium text-white rounded-lg transition-colors"

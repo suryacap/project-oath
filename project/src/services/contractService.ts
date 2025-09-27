@@ -215,10 +215,23 @@ export class ContractService {
     patient: string,
     doctor: string,
     quantity: number
-  ): Promise<ethers.TransactionResponse> {
+  ): Promise<{ transactionHash: string }> {
     if (!this.contract) throw new Error('Contract not initialized');
     
-    return await this.contract.dispenseDrug(batchId, prescriptionId, patient, doctor, quantity);
+    try {
+      const tx = await this.contract.dispenseDrug(batchId, prescriptionId, patient, doctor, quantity);
+      const receipt = await tx.wait();
+      
+      if (!receipt) {
+        throw new Error('Transaction failed');
+      }
+      
+      return {
+        transactionHash: receipt.hash
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to dispense drug: ${error.message}`);
+    }
   }
 
   // Doctor functions
