@@ -7,6 +7,8 @@ declare global {
   interface Window {
     ethereum?: {
       request: (args: { method: string; params?: any[] }) => Promise<any>;
+      on: (event: string, callback: (...args: any[]) => void) => void;
+      removeListener: (event: string, callback: (...args: any[]) => void) => void;
     };
     showProfile?: () => void;
   }
@@ -1874,6 +1876,8 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isPrescribing, setIsPrescribing] = useState(false);
   const [prescriptionResult, setPrescriptionResult] = useState<{ prescriptionId: string; transactionHash: string } | null>(null);
+  const [realPrescriptions, setRealPrescriptions] = useState<any[]>([]);
+  const [isLoadingPrescriptions, setIsLoadingPrescriptions] = useState(false);
 
   // Set up global profile handler
   React.useEffect(() => {
@@ -1909,11 +1913,42 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
       ]);
 
       setConnectedAddress(address);
+      
+      // Load prescriptions for this doctor
+      await loadDoctorPrescriptions(address);
     } catch (error: any) {
       console.error('Error connecting wallet:', error);
       setConnectionError(error.message || 'Failed to connect wallet. Please make sure MetaMask is installed and unlocked.');
     } finally {
       setIsConnecting(false);
+    }
+  };
+
+  const loadDoctorPrescriptions = async (doctorAddress: string) => {
+    setIsLoadingPrescriptions(true);
+    try {
+      const prescriptionData = await contractService.getPrescriptionDetailsByDoctor(doctorAddress);
+      
+      // Transform the data into the format expected by the UI
+      const transformedPrescriptions = prescriptionData.ids.map((id, index) => ({
+        id: id,
+        type: 'Prescription Issued',
+        date: new Date(prescriptionData.timestamps[index] * 1000).toLocaleDateString(),
+        medication: prescriptionData.medicineNames[index],
+        details: `${prescriptionData.dosages[index]} - ${prescriptionData.quantities[index]} units`,
+        doctor: 'Dr. Smith', // We could get this from the contract if needed
+        pharmacy: 'Central Pharmacy', // This would come from dispensing records
+        hash: id.slice(0, 12) + '...',
+        patient: prescriptionData.patients[index],
+        timestamp: prescriptionData.timestamps[index]
+      }));
+      
+      setRealPrescriptions(transformedPrescriptions);
+    } catch (error: any) {
+      console.error('Error loading prescriptions:', error);
+      setRealPrescriptions([]);
+    } finally {
+      setIsLoadingPrescriptions(false);
     }
   };
 
@@ -1938,6 +1973,11 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
       
       // Set prescription result to show in UI
       setPrescriptionResult(result);
+      
+      // Reload prescriptions to include the new one
+      if (connectedAddress) {
+        await loadDoctorPrescriptions(connectedAddress);
+      }
       
       // Reset form
       setPrescriptionData({ patientWallet: '', medicineName: '', dosage: '', quantity: '' });
@@ -2232,14 +2272,32 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-semibold text-gray-800">Patient Records</h3>
                   <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                    {DUMMY_DATA.patientHistory.length} records
+                    {isLoadingPrescriptions ? 'Loading...' : `${realPrescriptions.length} records`}
                   </span>
                 </div>
                 
                 <div className="space-y-4 max-h-96 overflow-y-auto">
-                  {DUMMY_DATA.patientHistory.map((item, index) => (
-                    <PatientHistoryCard key={index} item={item} />
-                  ))}
+                  {isLoadingPrescriptions ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
+                      <span className="ml-3 text-gray-600">Loading prescriptions...</span>
+                    </div>
+                  ) : realPrescriptions.length > 0 ? (
+                    realPrescriptions
+                      .filter(item => 
+                        searchPatient === '' || 
+                        item.patient?.toLowerCase().includes(searchPatient.toLowerCase())
+                      )
+                      .map((item, index) => (
+                        <PatientHistoryCard key={index} item={item} />
+                      ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <User className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                      <p>No prescriptions found</p>
+                      <p className="text-sm">Issue your first prescription to see it here</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

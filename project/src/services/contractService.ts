@@ -1,6 +1,17 @@
 import { ethers } from 'ethers';
 import { OATH_ABI, OATH_CONTRACT_ADDRESS, Batch, Prescription } from '../contracts/OathABI';
 
+// TypeScript declaration for ethereum
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string; params?: any[] }) => Promise<any>;
+      on: (event: string, callback: (...args: any[]) => void) => void;
+      removeListener: (event: string, callback: (...args: any[]) => void) => void;
+    };
+  }
+}
+
 export class ContractService {
   private contract: ethers.Contract | null = null;
   private provider: ethers.Provider | null = null;
@@ -8,12 +19,51 @@ export class ContractService {
 
   constructor() {
     this.initializeProvider();
+    this.setupEventListeners();
   }
 
   private async initializeProvider() {
     if (typeof window !== 'undefined' && window.ethereum) {
       this.provider = new ethers.BrowserProvider(window.ethereum);
       this.contract = new ethers.Contract(OATH_CONTRACT_ADDRESS, OATH_ABI, this.provider);
+    }
+  }
+
+  private setupEventListeners() {
+    if (typeof window !== 'undefined' && window.ethereum) {
+      // Listen for account changes (when user switches or disconnects accounts)
+      window.ethereum.on('accountsChanged', (accounts: string[]) => {
+        console.log('Accounts changed:', accounts);
+        if (accounts.length === 0) {
+          // User disconnected all accounts
+          this.handleDisconnect();
+        }
+      });
+
+      // Listen for chain changes
+      window.ethereum.on('chainChanged', (chainId: string) => {
+        console.log('Chain changed:', chainId);
+        // Re-initialize provider with new chain
+        this.initializeProvider();
+      });
+
+      // Listen for disconnect events
+      window.ethereum.on('disconnect', (error: any) => {
+        console.log('MetaMask disconnected:', error);
+        this.handleDisconnect();
+      });
+    }
+  }
+
+  private handleDisconnect() {
+    // Reset all state when disconnected
+    this.contract = null;
+    this.signer = null;
+    this.provider = null;
+    
+    // Dispatch a custom event to notify the app
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('walletDisconnected'));
     }
   }
 
@@ -59,6 +109,38 @@ export class ContractService {
       return accounts[0] || null;
     } catch (error) {
       return null;
+    }
+  }
+
+  async disconnectWallet(): Promise<void> {
+    try {
+      // Try to disconnect from MetaMask using wallet_switchEthereumChain
+      // This is a workaround since MetaMask doesn't provide a direct disconnect method
+      if (window.ethereum) {
+        try {
+          // Try to switch to a non-existent chain to trigger disconnection
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x0' }], // Invalid chain ID
+          });
+        } catch (switchError: any) {
+          // This is expected to fail, which is what we want
+          console.log('Disconnect triggered via chain switch');
+        }
+      }
+      
+      // Reset the contract service state
+      this.contract = null;
+      this.signer = null;
+      this.provider = null;
+      
+      console.log('Wallet disconnected from app.');
+    } catch (error) {
+      console.error('Error disconnecting wallet:', error);
+      // Even if the disconnect fails, we should still reset our local state
+      this.contract = null;
+      this.signer = null;
+      this.provider = null;
     }
   }
 
@@ -298,6 +380,27 @@ export class ContractService {
       quantity: Number(result[5]),
       timestamp: Number(result[6]),
       exists: true
+    };
+  }
+
+  async getPrescriptionDetailsByDoctor(doctorAddress: string): Promise<{
+    ids: string[];
+    patients: string[];
+    medicineNames: string[];
+    dosages: string[];
+    quantities: number[];
+    timestamps: number[];
+  }> {
+    if (!this.contract) throw new Error('Contract not initialized');
+    
+    const result = await this.contract.getPrescriptionDetailsByDoctor(doctorAddress);
+    return {
+      ids: result[0],
+      patients: result[1],
+      medicineNames: result[2],
+      dosages: result[3],
+      quantities: result[4].map((q: any) => Number(q)),
+      timestamps: result[5].map((t: any) => Number(t))
     };
   }
 }

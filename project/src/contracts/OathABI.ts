@@ -38,10 +38,16 @@ export const OATH_ABI = [
   // Doctor functions
   "function prescribeMedicine(address _patient, string memory _medicineName, string memory _dosage, uint256 _quantity) external returns (string memory)",
   "function getPrescription(string memory _prescriptionId) view returns (string memory, address, address, string memory, string memory, uint256, uint256)",
-  "function getTotalPrescriptions() view returns (uint256)"
+  "function getTotalPrescriptions() view returns (uint256)",
+  "function getPrescriptionsByDoctor(address _doctor) view returns (string[] memory)",
+  "function getPrescriptionCountByDoctor(address _doctor) view returns (uint256)",
+  "function getPrescriptionDetailsByDoctor(address _doctor) view returns (string[] memory, address[] memory, string[] memory, string[] memory, uint256[] memory, uint256[] memory)",
+  "function getPrescriptionsByPatient(address _patient) view returns (string[] memory)",
+  "function getPrescriptionCountByPatient(address _patient) view returns (uint256)",
+  "function getPrescriptionDetailsByPatient(address _patient) view returns (string[] memory, address[] memory, string[] memory, string[] memory, uint256[] memory, uint256[] memory)"
 ];
 
-export const OATH_CONTRACT_ADDRESS = "0xf27E846Ec0b5BbbCBb5D1eF6fD52c2Dc7529124A";
+export const OATH_CONTRACT_ADDRESS = "0x0B3b1bB97272050819355A98fbbAE47e0F9f44b1";
 
 // TypeScript interfaces for contract data
 export interface Batch {
