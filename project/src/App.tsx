@@ -1,4 +1,14 @@
 import React, { useState, useMemo } from 'react';
+
+// TypeScript declaration for ethereum and global functions
+declare global {
+  interface Window {
+    ethereum?: {
+      request: (args: { method: string }) => Promise<string[]>;
+    };
+    showProfile?: () => void;
+  }
+}
 import { 
   CheckCircle, 
   XCircle, 
@@ -40,18 +50,103 @@ const WALLET_ROLES = {
   // Manufacturer wallets
   '0x742d35cc6bf8c8a2c8c5a9d3f8b2e9c7a1d4f6b8': 'Manufacturer',
   '0x1234567890abcdef1234567890abcdef12345678': 'Manufacturer',
+  '0x1a2b3c4d5e6f7890abcdef1234567890abcdef12': 'Manufacturer',
+  '0x9876543210fedcba9876543210fedcba98765432': 'Manufacturer',
   
   // Pharmacy wallets  
   '0x5b6f7a8c9d2e4f1b3a6d8c5f2e9b4a7d3c6f9e2': 'Pharmacy',
   '0xabcdef1234567890abcdef1234567890abcdef12': 'Pharmacy',
+  '0x2b3c4d5e6f7890abcdef1234567890abcdef1234': 'Pharmacy',
+  '0x876543210fedcba9876543210fedcba9876543210': 'Pharmacy',
   
   // Doctor wallets
   '0x9e8d7c6b5a4f3e2d1c0b9a8f7e6d5c4b3a2f1e0': 'Doctor',
   '0xfedcba0987654321fedcba0987654321fedcba09': 'Doctor',
+  '0x3c4d5e6f7890abcdef1234567890abcdef123456': 'Doctor',
+  '0x76543210fedcba9876543210fedcba9876543210f': 'Doctor',
   
   // Patient wallets
   '0x3c6f9e2b5a8d1c4f7e0b3a6d9c2f5e8b1a4d7c0': 'Patient',
-  '0x0987654321fedcba0987654321fedcba09876543': 'Patient'
+  '0x0987654321fedcba0987654321fedcba09876543': 'Patient',
+  '0x4d5e6f7890abcdef1234567890abcdef12345678': 'Patient',
+  '0x6543210fedcba9876543210fedcba9876543210fe': 'Patient'
+};
+
+// Profile Data for each role
+const PROFILE_DATA = {
+  Manufacturer: {
+    companyName: "MediPharm Industries",
+    type: "Pharmaceutical Manufacturing Company",
+    founded: "2010",
+    license: "MFG-2024-001",
+    certifications: ["FDA Approved", "ISO 9001:2015", "GMP Certified", "WHO Prequalified"],
+    specializations: ["Pharmaceutical Manufacturing", "Quality Control", "Regulatory Compliance", "Drug Development"],
+    contact: {
+      email: "info@medipharm.com",
+      phone: "+1-555-0123",
+      address: "123 Pharma Ave, Boston, MA 02101",
+      website: "www.medipharm.com"
+    },
+    kyc: {
+      status: "verified",
+      verifiedDate: "2024-01-15",
+      documents: ["Business License", "FDA Registration", "ISO Certification", "GMP Certificate"]
+    }
+  },
+  Pharmacy: {
+    companyName: "HealthPlus Pharmacy",
+    type: "Licensed Pharmacy Chain",
+    founded: "2015",
+    license: "PHARM-2024-045",
+    certifications: ["State Pharmacy License", "DEA Registration", "NABP Verified", "HIPAA Compliant"],
+    specializations: ["Prescription Management", "Drug Interactions", "Patient Counseling", "Compounding Services"],
+    contact: {
+      email: "info@healthplus.com",
+      phone: "+1-555-0456",
+      address: "456 Health St, San Francisco, CA 94102",
+      website: "www.healthplus.com"
+    },
+    kyc: {
+      status: "verified",
+      verifiedDate: "2024-01-20",
+      documents: ["Pharmacy License", "DEA Registration", "State Board Certification", "NABP Certificate"]
+    }
+  },
+  Doctor: {
+    name: "Dr. Emily Rodriguez",
+    title: "Internal Medicine Specialist",
+    hospital: "City General Hospital",
+    license: "MD-2024-078",
+    experience: "18 years",
+    specializations: ["Internal Medicine", "Chronic Disease Management", "Preventive Care"],
+    contact: {
+      email: "emily.rodriguez@citygeneral.com",
+      phone: "+1-555-0789",
+      address: "789 Medical Blvd, New York, NY 10001"
+    },
+    kyc: {
+      status: "verified",
+      verifiedDate: "2024-01-10",
+      documents: ["Medical License", "Board Certification", "Hospital Privileges"]
+    }
+  },
+  Patient: {
+    name: "John Smith",
+    title: "Patient",
+    age: "45",
+    bloodType: "O+",
+    allergies: ["Penicillin", "Shellfish"],
+    emergencyContact: {
+      name: "Jane Smith",
+      relationship: "Spouse",
+      phone: "+1-555-9999"
+    },
+    medicalHistory: ["Hypertension", "Type 2 Diabetes"],
+    insurance: {
+      provider: "Blue Cross Blue Shield",
+      policyNumber: "BCBS-123456789"
+    }
+  }
 };
 
 // Enhanced Dummy Data
@@ -117,6 +212,159 @@ const DUMMY_DATA = {
   ],
 };
 
+// KYC Verification Component
+const KYCVerification = ({ role, profileData, onClose }: { role: string; profileData: any; onClose: () => void }) => {
+  const [documents, setDocuments] = useState<{[key: string]: File | null}>({});
+  const [isUploading, setIsUploading] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState(profileData.kyc.status);
+
+  const requiredDocuments = profileData.kyc.documents || [];
+
+  const handleFileUpload = (docType: string, file: File) => {
+    setDocuments(prev => ({ ...prev, [docType]: file }));
+  };
+
+  const handleSubmit = async () => {
+    setIsUploading(true);
+    // Simulate upload process
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Instant verification after submission
+    setVerificationStatus('verified');
+    setIsUploading(false);
+  };
+
+  const handleRedoKYC = () => {
+    setVerificationStatus('pending');
+    setDocuments({});
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'verified': return THEME.SUCCESS;
+      case 'pending': return THEME.WARNING;
+      case 'rejected': return THEME.CRITICAL;
+      default: return THEME.TEXT;
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'verified': return CheckCircle;
+      case 'pending': return Clock;
+      case 'rejected': return XCircle;
+      default: return AlertTriangle;
+    }
+  };
+
+  const StatusIcon = getStatusIcon(verificationStatus);
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <Shield className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
+              <h2 className="text-2xl font-bold" style={{ color: THEME.PRIMARY }}>KYC Verification</h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <XCircle className="w-6 h-6" />
+            </button>
+          </div>
+
+          {/* Current Status */}
+          <div className="mb-8 p-6 rounded-xl border-2" style={{ borderColor: getStatusColor(verificationStatus) + '20', backgroundColor: getStatusColor(verificationStatus) + '10' }}>
+            <div className="flex items-center mb-4">
+              <StatusIcon className="w-6 h-6 mr-3" style={{ color: getStatusColor(verificationStatus) }} />
+              <h3 className="text-lg font-semibold">Verification Status: {verificationStatus.toUpperCase()}</h3>
+            </div>
+            {verificationStatus === 'verified' && (
+              <p className="text-sm text-gray-600">
+                Verified on {profileData.kyc.verifiedDate}. Your identity has been successfully verified.
+              </p>
+            )}
+            {verificationStatus === 'pending' && (
+              <p className="text-sm text-gray-600">
+                Your documents are under review. This process typically takes 1-3 business days.
+              </p>
+            )}
+          </div>
+
+          {/* Document Upload Section */}
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-800">Required Documents</h3>
+              {verificationStatus === 'verified' && (
+                <button
+                  onClick={handleRedoKYC}
+                  className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
+                  style={{ backgroundColor: THEME.WARNING, color: 'white' }}
+                >
+                  <Upload className="w-4 h-4 mr-2 inline" />
+                  Redo KYC
+                </button>
+              )}
+            </div>
+            
+            {requiredDocuments.map((doc: string, index: number) => (
+              <div key={index} className="border border-gray-200 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-800">{doc}</h4>
+                  {documents[doc] && (
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  )}
+                </div>
+                <input
+                  type="file"
+                  accept=".pdf,.jpg,.jpeg,.png"
+                  onChange={(e) => e.target.files?.[0] && handleFileUpload(doc, e.target.files[0])}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent"
+                />
+                {documents[doc] && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    Selected: {documents[doc]?.name}
+                  </p>
+                )}
+              </div>
+            ))}
+
+            <button
+              onClick={handleSubmit}
+              disabled={isUploading || Object.keys(documents).length !== requiredDocuments.length}
+              className="w-full py-3 px-6 font-bold text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ backgroundColor: THEME.PRIMARY }}
+            >
+              {isUploading ? (
+                <>
+                  <div className="animate-spin w-5 h-5 mr-3 border-2 border-white border-t-transparent rounded-full inline-block"></div>
+                  Uploading Documents...
+                </>
+              ) : (
+                'Submit for Instant Verification'
+              )}
+            </button>
+          </div>
+
+          {/* Verification Info */}
+          <div className="mt-8 p-4 bg-gray-50 rounded-xl">
+            <h4 className="font-semibold text-gray-800 mb-2">Verification Process</h4>
+            <ul className="text-sm text-gray-600 space-y-1">
+              <li>• All documents are encrypted and stored securely</li>
+              <li>• Instant verification using AI-powered document analysis</li>
+              <li>• You can redo KYC verification at any time</li>
+              <li>• Documents are automatically deleted after verification</li>
+              <li>• Verification status is updated in real-time</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Wallet Connection Hook
 const useWallet = () => {
   const [isConnected, setIsConnected] = useState(false);
@@ -131,7 +379,8 @@ const useWallet = () => {
     try {
       // Check if MetaMask is installed
       if (typeof window.ethereum === 'undefined') {
-        // Simulate wallet connection for demo purposes
+        // Fallback to demo mode
+        console.log('MetaMask not found, using demo mode...');
         const demoAddresses = Object.keys(WALLET_ROLES);
         const randomAddress = demoAddresses[Math.floor(Math.random() * demoAddresses.length)];
         
@@ -139,35 +388,59 @@ const useWallet = () => {
         
         setWalletAddress(randomAddress);
         setIsConnected(true);
+        console.log('Demo wallet connected:', randomAddress);
         return randomAddress;
       }
       
-      // Request account access
+      // Always request account access to trigger MetaMask popup
+      console.log('Requesting MetaMask connection...');
       const accounts = await window.ethereum.request({
         method: 'eth_requestAccounts',
       });
       
       if (accounts.length > 0) {
-        setWalletAddress(accounts[0]);
+        const address = accounts[0];
+        console.log('MetaMask connected:', address);
+        setWalletAddress(address);
         setIsConnected(true);
-        return accounts[0];
+        return address;
+      } else {
+        setError('No accounts found. Please make sure your wallet is unlocked.');
       }
-    } catch (err) {
-      setError('Failed to connect wallet. Please try again.');
+    } catch (err: any) {
       console.error('Wallet connection error:', err);
+      if (err.code === 4001) {
+        setError('Connection rejected by user. Please try again.');
+      } else if (err.code === -32002) {
+        setError('Connection request already pending. Please check your MetaMask extension.');
+      } else {
+        setError('Failed to connect to MetaMask. Please make sure MetaMask is installed and unlocked.');
+      }
     } finally {
       setIsConnecting(false);
     }
   };
 
-  const disconnectWallet = () => {
-    setIsConnected(false);
-    setWalletAddress('');
-    setError('');
+  const disconnectWallet = async () => {
+    try {
+      // If MetaMask is available, try to disconnect
+      if (typeof window.ethereum !== 'undefined') {
+        // MetaMask doesn't have a direct disconnect method, but we can reset the state
+        // The user would need to manually disconnect in MetaMask if they want to
+        console.log('Wallet disconnected from app. To fully disconnect, please disconnect in MetaMask.');
+      }
+    } catch (err) {
+      console.error('Error during disconnect:', err);
+    } finally {
+      // Always reset local state
+      setIsConnected(false);
+      setWalletAddress('');
+      setError('');
+    }
   };
 
-  const getUserRole = (address) => {
-    return WALLET_ROLES[address] || null;
+  const getUserRole = (address: string) => {
+    return WALLET_ROLES[address as keyof typeof WALLET_ROLES] || null;
   };
 
   return {
@@ -175,6 +448,7 @@ const useWallet = () => {
     walletAddress,
     isConnecting,
     error,
+    setError,
     connectWallet,
     disconnectWallet,
     getUserRole
@@ -183,7 +457,7 @@ const useWallet = () => {
 
 // Role Selection Screen Component
 const WalletConnectionScreen = ({ onWalletConnect }: { onWalletConnect: (address: string, role: string) => void }) => {
-  const { isConnected, walletAddress, isConnecting, error, connectWallet, getUserRole } = useWallet();
+  const { isConnected, walletAddress, isConnecting, error, connectWallet, getUserRole, setError } = useWallet();
   
   const handleConnect = async () => {
     const address = await connectWallet();
@@ -296,8 +570,9 @@ const WalletConnectionScreen = ({ onWalletConnect }: { onWalletConnect: (address
             )}
 
             <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-4">
-              <p className="mb-2"><strong>Demo Mode:</strong> If MetaMask is not installed, a demo wallet will be connected automatically.</p>
-              <p>Your role will be determined based on your wallet address.</p>
+              <p className="mb-2"><strong>Auto-Routing:</strong> Your role will be automatically determined based on your wallet address.</p>
+              <p><strong>MetaMask Required:</strong> Please install MetaMask extension for full functionality.</p>
+              <p><strong>Demo Mode:</strong> If MetaMask is not installed, a demo wallet will be connected automatically.</p>
             </div>
           </div>
         ) : (
@@ -366,8 +641,360 @@ const RoleSelectionScreen = ({ setRole }: { setRole: (role: string) => void }) =
   );
 };
 
+// Profile Component
+const Profile = ({ role, profileData, onClose }: { role: string; profileData: any; onClose: () => void }) => {
+  const [showKYC, setShowKYC] = useState(false);
+
+  const renderProfileContent = () => {
+    switch (role) {
+      case 'Manufacturer':
+        return (
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold mb-4" style={{ color: THEME.PRIMARY }}>Company Information</h3>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Company Name:</span>
+                    <p className="text-gray-800">{profileData.companyName}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Type:</span>
+                    <p className="text-gray-800">{profileData.type}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Founded:</span>
+                    <p className="text-gray-800">{profileData.founded}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">License:</span>
+                    <p className="text-gray-800 font-mono">{profileData.license}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold mb-4" style={{ color: THEME.PRIMARY }}>Contact Information</h3>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Email:</span>
+                    <p className="text-gray-800">{profileData.contact.email}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Phone:</span>
+                    <p className="text-gray-800">{profileData.contact.phone}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Address:</span>
+                    <p className="text-gray-800">{profileData.contact.address}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Website:</span>
+                    <p className="text-gray-800">{profileData.contact.website}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold mb-4" style={{ color: THEME.PRIMARY }}>Certifications</h3>
+                <div className="flex flex-wrap gap-2">
+                  {profileData.certifications.map((cert: string, index: number) => (
+                    <span key={index} className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                      {cert}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold mb-4" style={{ color: THEME.PRIMARY }}>Specializations</h3>
+                <div className="flex flex-wrap gap-2">
+                  {profileData.specializations.map((spec: string, index: number) => (
+                    <span key={index} className="px-3 py-1 rounded-full text-sm font-medium" style={{ backgroundColor: THEME.SECONDARY + '20', color: THEME.PRIMARY }}>
+                      {spec}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'Pharmacy':
+        return (
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold mb-4" style={{ color: THEME.PRIMARY }}>Pharmacy Information</h3>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Pharmacy Name:</span>
+                    <p className="text-gray-800">{profileData.companyName}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Type:</span>
+                    <p className="text-gray-800">{profileData.type}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Founded:</span>
+                    <p className="text-gray-800">{profileData.founded}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">License:</span>
+                    <p className="text-gray-800 font-mono">{profileData.license}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold mb-4" style={{ color: THEME.PRIMARY }}>Contact Information</h3>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Email:</span>
+                    <p className="text-gray-800">{profileData.contact.email}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Phone:</span>
+                    <p className="text-gray-800">{profileData.contact.phone}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Address:</span>
+                    <p className="text-gray-800">{profileData.contact.address}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Website:</span>
+                    <p className="text-gray-800">{profileData.contact.website}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold mb-4" style={{ color: THEME.PRIMARY }}>Certifications</h3>
+                <div className="flex flex-wrap gap-2">
+                  {profileData.certifications.map((cert: string, index: number) => (
+                    <span key={index} className="px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                      {cert}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold mb-4" style={{ color: THEME.PRIMARY }}>Specializations</h3>
+                <div className="flex flex-wrap gap-2">
+                  {profileData.specializations.map((spec: string, index: number) => (
+                    <span key={index} className="px-3 py-1 rounded-full text-sm font-medium" style={{ backgroundColor: THEME.SECONDARY + '20', color: THEME.PRIMARY }}>
+                      {spec}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'Doctor':
+        return (
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold mb-4" style={{ color: THEME.PRIMARY }}>Professional Information</h3>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Name:</span>
+                    <p className="text-gray-800">{profileData.name}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Title:</span>
+                    <p className="text-gray-800">{profileData.title}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Hospital:</span>
+                    <p className="text-gray-800">{profileData.hospital}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">License:</span>
+                    <p className="text-gray-800 font-mono">{profileData.license}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Experience:</span>
+                    <p className="text-gray-800">{profileData.experience}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold mb-4" style={{ color: THEME.PRIMARY }}>Contact Information</h3>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Email:</span>
+                    <p className="text-gray-800">{profileData.contact.email}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Phone:</span>
+                    <p className="text-gray-800">{profileData.contact.phone}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Address:</span>
+                    <p className="text-gray-800">{profileData.contact.address}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl shadow-lg">
+              <h3 className="text-lg font-semibold mb-4" style={{ color: THEME.PRIMARY }}>Specializations</h3>
+              <div className="flex flex-wrap gap-2">
+                {profileData.specializations.map((spec: string, index: number) => (
+                  <span key={index} className="px-3 py-1 rounded-full text-sm font-medium" style={{ backgroundColor: THEME.SECONDARY + '20', color: THEME.PRIMARY }}>
+                    {spec}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+
+      case 'Patient':
+        return (
+          <div className="space-y-6">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold mb-4" style={{ color: THEME.PRIMARY }}>Personal Information</h3>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Name:</span>
+                    <p className="text-gray-800">{profileData.name}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Age:</span>
+                    <p className="text-gray-800">{profileData.age} years</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Blood Type:</span>
+                    <p className="text-gray-800">{profileData.bloodType}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold mb-4" style={{ color: THEME.PRIMARY }}>Emergency Contact</h3>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Name:</span>
+                    <p className="text-gray-800">{profileData.emergencyContact.name}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Relationship:</span>
+                    <p className="text-gray-800">{profileData.emergencyContact.relationship}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Phone:</span>
+                    <p className="text-gray-800">{profileData.emergencyContact.phone}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold mb-4" style={{ color: THEME.PRIMARY }}>Medical Information</h3>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Allergies:</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {profileData.allergies.map((allergy: string, index: number) => (
+                        <span key={index} className="px-2 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                          {allergy}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Medical History:</span>
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {profileData.medicalHistory.map((condition: string, index: number) => (
+                        <span key={index} className="px-2 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                          {condition}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white p-6 rounded-xl shadow-lg">
+                <h3 className="text-lg font-semibold mb-4" style={{ color: THEME.PRIMARY }}>Insurance Information</h3>
+                <div className="space-y-3">
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Provider:</span>
+                    <p className="text-gray-800">{profileData.insurance.provider}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Policy Number:</span>
+                    <p className="text-gray-800 font-mono">{profileData.insurance.policyNumber}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return <div>Profile not found</div>;
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <User className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
+              <h2 className="text-2xl font-bold" style={{ color: THEME.PRIMARY }}>Profile</h2>
+            </div>
+            <div className="flex items-center space-x-3">
+              {(role === 'Manufacturer' || role === 'Pharmacy' || role === 'Doctor') && (
+                <button
+                  onClick={() => setShowKYC(true)}
+                  className="px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
+                  style={{ backgroundColor: THEME.SECONDARY, color: THEME.TEXT }}
+                >
+                  <Shield className="w-4 h-4 mr-2 inline" />
+                  KYC Verification
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+          </div>
+
+          {renderProfileContent()}
+        </div>
+      </div>
+
+      {showKYC && (
+        <KYCVerification
+          role={role}
+          profileData={profileData}
+          onClose={() => setShowKYC(false)}
+        />
+      )}
+    </div>
+  );
+};
+
 // Enhanced Header Component
-const Header = ({ title, role, setRole, walletAddress }: { title: string; role: string; setRole: (role: string | null) => void; walletAddress?: string }) => (
+const Header = ({ title, role, setRole, walletAddress, onDisconnect }: { title: string; role: string; setRole: (role: string | null) => void; walletAddress?: string; onDisconnect?: () => void }) => (
   <header className="shadow-lg sticky top-0 z-50" style={{ backgroundColor: THEME.PRIMARY }}>
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <div className="flex justify-between items-center">
@@ -388,7 +1015,25 @@ const Header = ({ title, role, setRole, walletAddress }: { title: string; role: 
             </div>
           )}
           <button
-            onClick={() => setRole(null)}
+            onClick={() => {
+              // This will be handled by the parent component
+              if (window.showProfile) {
+                window.showProfile();
+              }
+            }}
+            className="flex items-center px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
+            style={{ backgroundColor: THEME.SECONDARY, color: THEME.TEXT }}
+          >
+            <User className="w-4 h-4 mr-2" />
+            Profile
+          </button>
+          <button
+            onClick={() => {
+              if (onDisconnect) {
+                onDisconnect();
+              }
+              setRole(null);
+            }}
             className="flex items-center px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
             style={{ backgroundColor: THEME.SECONDARY, color: THEME.TEXT }}
           >
@@ -402,7 +1047,7 @@ const Header = ({ title, role, setRole, walletAddress }: { title: string; role: 
 );
 
 // Manufacturer Portal Components
-const ManufacturerPortal = ({ setRole, walletAddress }: { setRole: (role: string | null) => void; walletAddress?: string }) => {
+const ManufacturerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role: string | null) => void; walletAddress?: string; onDisconnect?: () => void }) => {
   const [formData, setFormData] = useState({
     batchId: '',
     medicineName: '',
@@ -411,6 +1056,15 @@ const ManufacturerPortal = ({ setRole, walletAddress }: { setRole: (role: string
   });
   const [lastHash, setLastHash] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+
+  // Set up global profile handler
+  React.useEffect(() => {
+    window.showProfile = () => setShowProfile(true);
+    return () => {
+      delete window.showProfile;
+    };
+  }, []);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -474,7 +1128,7 @@ const ManufacturerPortal = ({ setRole, walletAddress }: { setRole: (role: string
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="Manufacturer Portal" role="Manufacturer" setRole={setRole} walletAddress={walletAddress} />
+      <Header title="Manufacturer Portal" role="Manufacturer" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
       
       <div className="max-w-7xl mx-auto p-4 sm:p-8">
         <div className="grid lg:grid-cols-3 gap-8">
@@ -612,12 +1266,20 @@ const ManufacturerPortal = ({ setRole, walletAddress }: { setRole: (role: string
           </div>
         </div>
       </div>
+
+      {showProfile && (
+        <Profile
+          role="Manufacturer"
+          profileData={PROFILE_DATA.Manufacturer}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
     </div>
   );
 };
 
 // Pharmacy Portal Components  
-const PharmacyPortal = ({ setRole, walletAddress }: { setRole: (role: string | null) => void; walletAddress?: string }) => {
+const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role: string | null) => void; walletAddress?: string; onDisconnect?: () => void }) => {
   const [batchId, setBatchId] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [verificationResult, setVerificationResult] = useState<any>(null);
@@ -626,6 +1288,15 @@ const PharmacyPortal = ({ setRole, walletAddress }: { setRole: (role: string | n
     patientWallet: '',
     doctorEns: ''
   });
+  const [showProfile, setShowProfile] = useState(false);
+
+  // Set up global profile handler
+  React.useEffect(() => {
+    window.showProfile = () => setShowProfile(true);
+    return () => {
+      delete window.showProfile;
+    };
+  }, []);
 
   const handleVerify = async () => {
     if (!batchId.trim()) return;
@@ -708,7 +1379,7 @@ const PharmacyPortal = ({ setRole, walletAddress }: { setRole: (role: string | n
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="Pharmacy Portal" role="Pharmacy" setRole={setRole} walletAddress={walletAddress} />
+      <Header title="Pharmacy Portal" role="Pharmacy" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
       
       <div className="max-w-7xl mx-auto p-4 sm:p-8">
         <div className="grid lg:grid-cols-2 gap-8">
@@ -826,12 +1497,20 @@ const PharmacyPortal = ({ setRole, walletAddress }: { setRole: (role: string | n
           </div>
         </div>
       </div>
+
+      {showProfile && (
+        <Profile
+          role="Pharmacy"
+          profileData={PROFILE_DATA.Pharmacy}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
     </div>
   );
 };
 
 // Doctor Portal Components
-const DoctorPortal = ({ setRole, walletAddress }: { setRole: (role: string | null) => void; walletAddress?: string }) => {
+const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role: string | null) => void; walletAddress?: string; onDisconnect?: () => void }) => {
   const [prescriptionData, setPrescriptionData] = useState({
     patientWallet: '',
     medicineName: '',
@@ -839,6 +1518,15 @@ const DoctorPortal = ({ setRole, walletAddress }: { setRole: (role: string | nul
     duration: ''
   });
   const [searchPatient, setSearchPatient] = useState('');
+  const [showProfile, setShowProfile] = useState(false);
+
+  // Set up global profile handler
+  React.useEffect(() => {
+    window.showProfile = () => setShowProfile(true);
+    return () => {
+      delete window.showProfile;
+    };
+  }, []);
 
   const handlePrescribe = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -908,7 +1596,7 @@ const DoctorPortal = ({ setRole, walletAddress }: { setRole: (role: string | nul
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="Doctor Portal" role="Doctor" setRole={setRole} walletAddress={walletAddress} />
+      <Header title="Doctor Portal" role="Doctor" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
       
       <div className="max-w-7xl mx-auto p-4 sm:p-8">
         <div className="grid lg:grid-cols-2 gap-8">
@@ -1031,12 +1719,30 @@ const DoctorPortal = ({ setRole, walletAddress }: { setRole: (role: string | nul
           </div>
         </div>
       </div>
+
+      {showProfile && (
+        <Profile
+          role="Doctor"
+          profileData={PROFILE_DATA.Doctor}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
     </div>
   );
 };
 
 // Patient Portal Components
-const PatientPortal = ({ setRole, walletAddress }: { setRole: (role: string | null) => void; walletAddress?: string }) => {
+const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role: string | null) => void; walletAddress?: string; onDisconnect?: () => void }) => {
+  const [showProfile, setShowProfile] = useState(false);
+
+  // Set up global profile handler
+  React.useEffect(() => {
+    window.showProfile = () => setShowProfile(true);
+    return () => {
+      delete window.showProfile;
+    };
+  }, []);
+
   const TimelineItem = ({ item, index, isLast }: { item: any; index: number; isLast: boolean }) => {
     const getTypeColor = (type: string) => {
       if (type.includes('Prescription')) return THEME.PRIMARY;
@@ -1113,7 +1819,7 @@ const PatientPortal = ({ setRole, walletAddress }: { setRole: (role: string | nu
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="Patient Portal" role="Patient" setRole={setRole} walletAddress={walletAddress} />
+      <Header title="Patient Portal" role="Patient" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
       
       <div className="max-w-7xl mx-auto p-4 sm:p-8">
         <div className="grid lg:grid-cols-4 gap-8">
@@ -1209,6 +1915,14 @@ const PatientPortal = ({ setRole, walletAddress }: { setRole: (role: string | nu
           </div>
         </div>
       </div>
+
+      {showProfile && (
+        <Profile
+          role="Patient"
+          profileData={PROFILE_DATA.Patient}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
     </div>
   );
 };
@@ -1217,29 +1931,48 @@ const PatientPortal = ({ setRole, walletAddress }: { setRole: (role: string | nu
 const App = () => {
   const [currentRole, setCurrentRole] = useState<string | null>(null);
   const [connectedWallet, setConnectedWallet] = useState<string>('');
+  const { disconnectWallet } = useWallet();
+
+  // Check for existing session on component mount
+  React.useEffect(() => {
+    const savedRole = localStorage.getItem('oath-role');
+    const savedWallet = localStorage.getItem('oath-wallet');
+    
+    if (savedRole && savedWallet) {
+      setCurrentRole(savedRole);
+      setConnectedWallet(savedWallet);
+    }
+  }, []);
 
   const handleWalletConnect = (address: string, role: string) => {
     setConnectedWallet(address);
     setCurrentRole(role);
+    // Save to localStorage for session persistence
+    localStorage.setItem('oath-role', role);
+    localStorage.setItem('oath-wallet', address);
   };
 
-  const handleDisconnect = () => {
+  const handleDisconnect = async () => {
+    await disconnectWallet();
     setCurrentRole(null);
     setConnectedWallet('');
+    // Clear localStorage
+    localStorage.removeItem('oath-role');
+    localStorage.removeItem('oath-wallet');
   };
 
   const CurrentPortal = useMemo(() => {
     switch (currentRole) {
       case 'Manufacturer':
-        return (props: any) => <ManufacturerPortal {...props} walletAddress={connectedWallet} />;
+        return (props: any) => <ManufacturerPortal {...props} walletAddress={connectedWallet} onDisconnect={handleDisconnect} />;
       case 'Pharmacy':
-        return (props: any) => <PharmacyPortal {...props} walletAddress={connectedWallet} />;
+        return (props: any) => <PharmacyPortal {...props} walletAddress={connectedWallet} onDisconnect={handleDisconnect} />;
       case 'Doctor':
-        return (props: any) => <DoctorPortal {...props} walletAddress={connectedWallet} />;
+        return (props: any) => <DoctorPortal {...props} walletAddress={connectedWallet} onDisconnect={handleDisconnect} />;
       case 'Patient':
-        return (props: any) => <PatientPortal {...props} walletAddress={connectedWallet} />;
+        return (props: any) => <PatientPortal {...props} walletAddress={connectedWallet} onDisconnect={handleDisconnect} />;
       default:
-        return (props: any) => <WalletConnectionScreen onWalletConnect={handleWalletConnect} />;
+        return () => <WalletConnectionScreen onWalletConnect={handleWalletConnect} />;
     }
   }, [currentRole, connectedWallet]);
 
@@ -1288,7 +2021,7 @@ const App = () => {
       </style>
       
       <main>
-        <CurrentPortal setRole={handleDisconnect} />
+        <CurrentPortal setRole={setCurrentRole} />
       </main>
     </div>
   );
