@@ -30,7 +30,12 @@ import {
   CheckCircle2,
   Package,
   Link,
-  Zap
+  Zap,
+  Fingerprint,
+  Eye,
+  Database,
+  Lock,
+  BarChart3
 } from 'lucide-react';
 
 // Theme Configuration
@@ -69,7 +74,13 @@ const WALLET_ROLES = {
   '0x3c6f9e2b5a8d1c4f7e0b3a6d9c2f5e8b1a4d7c0': 'Patient',
   '0x0987654321fedcba0987654321fedcba09876543': 'Patient',
   '0x4d5e6f7890abcdef1234567890abcdef12345678': 'Patient',
-  '0x6543210fedcba9876543210fedcba9876543210fe': 'Patient'
+  '0x6543210fedcba9876543210fedcba9876543210fe': 'Patient',
+  
+  // Insurer wallets
+  '0x1a2b3c4d5e6f7890abcdef1234567890abcdef1234': 'Insurer',
+  '0x9f8e7d6c5b4a3928f7e6d5c4b3a2918f7e6d5c4': 'Insurer',
+  '0x5a4b3c2d1e0f9e8d7c6b5a4938271605f4e3d2c': 'Insurer',
+  '0x8e7d6c5b4a3928f7e6d5c4b3a2918f7e6d5c4b3': 'Insurer'
 };
 
 // Profile Data for each role
@@ -145,6 +156,30 @@ const PROFILE_DATA = {
     insurance: {
       provider: "Blue Cross Blue Shield",
       policyNumber: "BCBS-123456789"
+    },
+    biometricData: {
+      fingerprintHash: "0x1a2b3c4d5e6f7890abcdef1234567890abcdef1234",
+      isRegistered: true,
+      registeredDate: "2024-01-15"
+    }
+  },
+  Insurer: {
+    companyName: "HealthGuard Insurance",
+    type: "Health Insurance Provider",
+    founded: "2005",
+    license: "INS-2024-001",
+    certifications: ["State Insurance License", "HIPAA Compliant", "SOC 2 Type II", "ISO 27001"],
+    specializations: ["Health Insurance", "Claims Processing", "Risk Assessment", "Patient Data Analytics"],
+    contact: {
+      email: "info@healthguard.com",
+      phone: "+1-555-0123",
+      address: "789 Insurance Blvd, New York, NY 10001",
+      website: "www.healthguard.com"
+    },
+    kyc: {
+      status: "verified",
+      verifiedDate: "2024-01-10",
+      documents: ["Insurance License", "State Registration", "Financial Statements", "Compliance Certificate"]
     }
   }
 };
@@ -183,6 +218,45 @@ const DUMMY_DATA = {
       expiry: 'Invalid'
     }
   ],
+  biometricPatients: [
+    {
+      id: 'PAT-001',
+      name: 'John Smith',
+      fingerprintHash: '0x1a2b3c4d5e6f7890abcdef1234567890abcdef1234',
+      walletAddress: '0x3c6f9e2b5a8d1c4f7e0b3a6d9c2f5e8b1a4d7c0',
+      medicalHistory: [
+        { type: 'Prescription Issued', medication: 'Paracetamol 500mg', doctor: 'Dr. A. Smith', date: '2024-10-15', hash: '0xdef345abc789', details: 'Prescribed for headache relief' },
+        { type: 'Drug Dispensed', medication: 'Paracetamol 500mg', batch: 'BATCH-4537', pharmacy: 'City Drugstore', date: '2024-10-16', hash: '0xabc123def456', details: 'Successfully dispensed to patient' },
+        { type: 'Check-in', notes: 'No adverse effects reported. Patient recovering well.', doctor: 'Dr. A. Smith', date: '2024-10-25', hash: '0x223344556677', details: 'Follow-up consultation completed' }
+      ],
+      personalInfo: {
+        age: 45,
+        bloodType: 'O+',
+        allergies: ['Penicillin', 'Shellfish'],
+        emergencyContact: { name: 'Jane Smith', relationship: 'Spouse', phone: '+1-555-9999' },
+        medicalHistory: ['Hypertension', 'Type 2 Diabetes'],
+        insurance: { provider: 'Blue Cross Blue Shield', policyNumber: 'BCBS-123456789' }
+      }
+    },
+    {
+      id: 'PAT-002',
+      name: 'Sarah Johnson',
+      fingerprintHash: '0x2b3c4d5e6f7890abcdef1234567890abcdef12345',
+      walletAddress: '0x0987654321fedcba0987654321fedcba09876543',
+      medicalHistory: [
+        { type: 'Prescription Issued', medication: 'Amoxicillin 250mg', doctor: 'Dr. B. Wilson', date: '2024-10-20', hash: '0xdef345abc790', details: 'Prescribed for bacterial infection' },
+        { type: 'Drug Dispensed', medication: 'Amoxicillin 250mg', batch: 'BATCH-8890', pharmacy: 'HealthPlus Pharmacy', date: '2024-10-21', hash: '0xabc123def457', details: 'Successfully dispensed to patient' }
+      ],
+      personalInfo: {
+        age: 32,
+        bloodType: 'A+',
+        allergies: ['Latex'],
+        emergencyContact: { name: 'Mike Johnson', relationship: 'Brother', phone: '+1-555-8888' },
+        medicalHistory: ['Asthma'],
+        insurance: { provider: 'Aetna', policyNumber: 'AET-987654321' }
+      }
+    }
+  ],
   patientHistory: [
     { 
       type: 'Prescription Issued', 
@@ -210,6 +284,147 @@ const DUMMY_DATA = {
       details: 'Follow-up consultation completed'
     },
   ],
+};
+
+// Biometric Authentication Component
+const BiometricAuth = ({ onSuccess, onClose, mode = 'login' }: { onSuccess: (patientData: any) => void; onClose: () => void; mode?: 'login' | 'register' }) => {
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<any>(null);
+  const [error, setError] = useState('');
+
+  const handleFingerprintScan = async () => {
+    setIsScanning(true);
+    setError('');
+    setScanResult(null);
+
+    // Simulate fingerprint scanning
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Simulate scan result
+    const mockFingerprintHash = '0x1a2b3c4d5e6f7890abcdef1234567890abcdef1234';
+    const patient = DUMMY_DATA.biometricPatients.find(p => p.fingerprintHash === mockFingerprintHash);
+
+    if (patient) {
+      setScanResult(patient);
+      setTimeout(() => {
+        onSuccess(patient);
+      }, 1000);
+    } else {
+      setError('Fingerprint not recognized. Please try again or register first.');
+    }
+
+    setIsScanning(false);
+  };
+
+  const handleRegisterFingerprint = async () => {
+    setIsScanning(true);
+    setError('');
+
+    // Simulate fingerprint registration
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    const newFingerprintHash = `0x${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}`;
+    
+    setScanResult({
+      id: `PAT-${Date.now()}`,
+      name: 'New Patient',
+      fingerprintHash: newFingerprintHash,
+      message: 'Fingerprint registered successfully!'
+    });
+
+    setTimeout(() => {
+      onSuccess({ fingerprintHash: newFingerprintHash, isNew: true });
+    }, 1000);
+
+    setIsScanning(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+        <div className="p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <Fingerprint className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
+              <h2 className="text-2xl font-bold" style={{ color: THEME.PRIMARY }}>
+                {mode === 'register' ? 'Register Fingerprint' : 'Biometric Authentication'}
+              </h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <XCircle className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="text-center">
+            <div className="w-32 h-32 mx-auto mb-6 rounded-full flex items-center justify-center border-4 border-dashed border-gray-300">
+              <Fingerprint className="w-16 h-16 text-gray-400" />
+            </div>
+
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              {mode === 'register' ? 'Place your finger on the scanner' : 'Scan your fingerprint'}
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {mode === 'register' 
+                ? 'This will register your fingerprint for future authentication'
+                : 'This will authenticate your identity and access your medical records'
+              }
+            </p>
+
+            {error && (
+              <div className="p-4 bg-red-50 rounded-xl border border-red-200 mb-4">
+                <p className="text-red-700 text-sm">{error}</p>
+              </div>
+            )}
+
+            {scanResult && !scanResult.message && (
+              <div className="p-4 bg-green-50 rounded-xl border border-green-200 mb-4">
+                <div className="flex items-center">
+                  <CheckCircle className="w-5 h-5 mr-2 text-green-600" />
+                  <p className="text-green-700 text-sm">Patient found: {scanResult.name}</p>
+                </div>
+              </div>
+            )}
+
+            {scanResult && scanResult.message && (
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 mb-4">
+                <div className="flex items-center">
+                  <CheckCircle className="w-5 h-5 mr-2 text-blue-600" />
+                  <p className="text-blue-700 text-sm">{scanResult.message}</p>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={mode === 'register' ? handleRegisterFingerprint : handleFingerprintScan}
+              disabled={isScanning}
+              className="w-full py-4 font-bold text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              style={{ backgroundColor: THEME.PRIMARY }}
+            >
+              {isScanning ? (
+                <>
+                  <div className="animate-spin w-5 h-5 mr-3 border-2 border-white border-t-transparent rounded-full"></div>
+                  {mode === 'register' ? 'Registering...' : 'Scanning...'}
+                </>
+              ) : (
+                <>
+                  <Fingerprint className="w-5 h-5 mr-3" />
+                  {mode === 'register' ? 'Register Fingerprint' : 'Scan Fingerprint'}
+                </>
+              )}
+            </button>
+
+            <div className="mt-6 text-xs text-gray-500">
+              <p><strong>Security:</strong> Your fingerprint data is encrypted and stored securely on the blockchain.</p>
+              <p><strong>Privacy:</strong> Only authorized medical personnel can access your records.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // KYC Verification Component
@@ -565,7 +780,7 @@ const WalletConnectionScreen = ({ onWalletConnect, onPublicSearch }: { onWalletC
             <div className="mb-8">
               <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">Select Your Role & Connect</h3>
               <p className="text-center text-gray-600 mb-6">Choose your role and connect your MetaMask wallet to access your portal</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
                 <button
                   onClick={() => handleConnectWithRole('Manufacturer')}
                   disabled={isConnectingWithRole}
@@ -645,6 +860,28 @@ const WalletConnectionScreen = ({ onWalletConnect, onPublicSearch }: { onWalletC
                   <h4 className="font-bold text-gray-800 mb-1">Patient</h4>
                   <p className="text-sm text-gray-600 mb-3">View medical history</p>
                   {isConnectingWithRole && selectedRole === 'Patient' ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                      <span className="text-xs text-gray-600">Connecting...</span>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-500">Click to connect</div>
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => handleConnectWithRole('Insurer')}
+                  disabled={isConnectingWithRole}
+                  className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ 
+                    borderColor: '#8B5CF6', 
+                    backgroundColor: selectedRole === 'Insurer' ? '#8B5CF6' + '20' : '#8B5CF6' + '10'
+                  }}
+                >
+                  <BarChart3 className="w-8 h-8 mx-auto mb-2" style={{ color: '#8B5CF6' }} />
+                  <h4 className="font-bold text-gray-800 mb-1">Insurer</h4>
+                  <p className="text-sm text-gray-600 mb-3">Access patient data</p>
+                  {isConnectingWithRole && selectedRole === 'Insurer' ? (
                     <div className="flex items-center justify-center">
                       <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
                       <span className="text-xs text-gray-600">Connecting...</span>
@@ -1682,6 +1919,8 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
   });
   const [searchPatient, setSearchPatient] = useState('');
   const [showProfile, setShowProfile] = useState(false);
+  const [showBiometricAuth, setShowBiometricAuth] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<any>(null);
 
   // Set up global profile handler
   React.useEffect(() => {
@@ -1690,6 +1929,11 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
       delete window.showProfile;
     };
   }, []);
+
+  const handleBiometricAuth = (patientData: any) => {
+    setSelectedPatient(patientData);
+    setShowBiometricAuth(false);
+  };
 
   const handlePrescribe = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1849,7 +2093,7 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
             </div>
 
             <div className="mb-6">
-              <div className="flex gap-2">
+              <div className="flex gap-2 mb-4">
                 <input
                   type="text"
                   placeholder="Search patient ENS (e.g., jane.eth)"
@@ -1862,6 +2106,20 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
                         style={{ backgroundColor: THEME.PRIMARY }}>
                   <Search className="w-5 h-5" />
                 </button>
+              </div>
+              
+              <div className="text-center">
+                <button
+                  onClick={() => setShowBiometricAuth(true)}
+                  className="px-6 py-3 font-medium text-white rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center mx-auto"
+                  style={{ backgroundColor: THEME.SUCCESS }}
+                >
+                  <Fingerprint className="w-5 h-5 mr-2" />
+                  Biometric Patient Search
+                </button>
+                <p className="text-xs text-gray-500 mt-2">
+                  Scan patient fingerprint to access medical records
+                </p>
               </div>
             </div>
 
@@ -1890,6 +2148,88 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
           onClose={() => setShowProfile(false)}
         />
       )}
+
+      {showBiometricAuth && (
+        <BiometricAuth
+          onSuccess={handleBiometricAuth}
+          onClose={() => setShowBiometricAuth(false)}
+          mode="login"
+        />
+      )}
+
+      {selectedPatient && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full">
+            <div className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <User className="w-8 h-8 mr-3" style={{ color: THEME.SUCCESS }} />
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-800">Patient Found: {selectedPatient.name}</h2>
+                    <p className="text-gray-600">ID: {selectedPatient.id}</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedPatient(null)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Age:</span>
+                    <p className="text-gray-800">{selectedPatient.personalInfo.age} years</p>
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-gray-600">Blood Type:</span>
+                    <p className="text-gray-800">{selectedPatient.personalInfo.bloodType}</p>
+                  </div>
+                </div>
+                
+                <div>
+                  <span className="text-sm font-medium text-gray-600">Allergies:</span>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {selectedPatient.personalInfo.allergies.map((allergy: string, index: number) => (
+                      <span key={index} className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                        {allergy}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-sm font-medium text-gray-600">Medical History:</span>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {selectedPatient.personalInfo.medicalHistory.map((condition: string, index: number) => (
+                      <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                        {condition}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <h3 className="font-semibold text-gray-800 mb-3">Recent Medical Records</h3>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {selectedPatient.medicalHistory.slice(0, 3).map((record: any, index: number) => (
+                      <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-medium text-gray-800">{record.type}</h4>
+                          <span className="text-xs text-gray-500">{record.date}</span>
+                        </div>
+                        <p className="text-sm text-gray-600 mt-1">{record.medication || record.notes}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -1897,6 +2237,8 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
 // Patient Portal Components
 const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role: string | null) => void; walletAddress?: string; onDisconnect?: () => void }) => {
   const [showProfile, setShowProfile] = useState(false);
+  const [showBiometricAuth, setShowBiometricAuth] = useState(false);
+  const [isBiometricRegistered, setIsBiometricRegistered] = useState(false);
 
   // Set up global profile handler
   React.useEffect(() => {
@@ -1905,6 +2247,13 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
       delete window.showProfile;
     };
   }, []);
+
+  const handleBiometricSuccess = (patientData: any) => {
+    if (patientData.isNew) {
+      setIsBiometricRegistered(true);
+    }
+    setShowBiometricAuth(false);
+  };
 
   const TimelineItem = ({ item, isLast }: { item: any; isLast: boolean }) => {
     const getTypeColor = (type: string) => {
@@ -1985,7 +2334,69 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
       <Header title="Patient Portal" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
       
       <div className="max-w-7xl mx-auto p-4 sm:p-8">
-        <div className="grid lg:grid-cols-4 gap-8">
+        <div className="grid lg:grid-cols-5 gap-8">
+          {/* Biometric Authentication Panel */}
+          <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-xl">
+            <div className="flex items-center mb-6">
+              <Fingerprint className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
+              <div>
+                <h2 className="text-xl font-bold" style={{ color: THEME.PRIMARY }}>Biometric Auth</h2>
+                <p className="text-sm text-gray-600">Secure access</p>
+              </div>
+            </div>
+
+            {!isBiometricRegistered ? (
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                  <Fingerprint className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="font-semibold text-gray-800 mb-2">Register Fingerprint</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Register your fingerprint for secure access to your medical records
+                </p>
+                <button
+                  onClick={() => setShowBiometricAuth(true)}
+                  className="w-full py-2 px-4 font-medium text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
+                  style={{ backgroundColor: THEME.PRIMARY }}
+                >
+                  <Fingerprint className="w-4 h-4 mr-2 inline" />
+                  Register Now
+                </button>
+              </div>
+            ) : (
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="font-semibold text-gray-800 mb-2">Fingerprint Registered</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Your biometric authentication is active
+                </p>
+                <div className="text-xs text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+                  ✓ Biometric security enabled
+                </div>
+              </div>
+            )}
+
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="font-semibold text-gray-800 mb-3">Security Features</h3>
+              <div className="space-y-2 text-sm text-gray-600">
+                <div className="flex items-center">
+                  <Lock className="w-4 h-4 mr-2 text-green-600" />
+                  <span>Encrypted storage</span>
+                </div>
+                <div className="flex items-center">
+                  <Shield className="w-4 h-4 mr-2 text-blue-600" />
+                  <span>Blockchain verified</span>
+                </div>
+                <div className="flex items-center">
+                  <Eye className="w-4 h-4 mr-2 text-purple-600" />
+                  <span>Privacy protected</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Digital Proofs Panel */}
           <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-xl">
             <div className="flex items-center mb-6">
@@ -2083,6 +2494,305 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
           role="Patient"
           profileData={PROFILE_DATA.Patient}
           onClose={() => setShowProfile(false)}
+        />
+      )}
+
+      {showBiometricAuth && (
+        <BiometricAuth
+          onSuccess={handleBiometricSuccess}
+          onClose={() => setShowBiometricAuth(false)}
+          mode="register"
+        />
+      )}
+    </div>
+  );
+};
+
+// Insurer Portal Components
+const InsurerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role: string | null) => void; walletAddress?: string; onDisconnect?: () => void }) => {
+  const [showProfile, setShowProfile] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState<any>(null);
+  const [showBiometricAuth, setShowBiometricAuth] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Set up global profile handler
+  React.useEffect(() => {
+    window.showProfile = () => setShowProfile(true);
+    return () => {
+      delete window.showProfile;
+    };
+  }, []);
+
+  const handleBiometricAuth = (patientData: any) => {
+    setSelectedPatient(patientData);
+    setShowBiometricAuth(false);
+  };
+
+  const filteredPatients = DUMMY_DATA.biometricPatients.filter(patient =>
+    patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    patient.id.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const PatientCard = ({ patient }: { patient: any }) => (
+    <div className="bg-white p-6 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+         onClick={() => setSelectedPatient(patient)}>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center">
+          <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mr-3">
+            <User className="w-6 h-6 text-purple-600" />
+          </div>
+          <div>
+            <h3 className="font-bold text-gray-800">{patient.name}</h3>
+            <p className="text-sm text-gray-600">ID: {patient.id}</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-sm text-gray-500">Age: {patient.personalInfo.age}</p>
+          <p className="text-sm text-gray-500">Blood Type: {patient.personalInfo.bloodType}</p>
+        </div>
+      </div>
+      
+      <div className="space-y-2">
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">Insurance:</span>
+          <span className="font-medium">{patient.personalInfo.insurance.provider}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">Policy:</span>
+          <span className="font-mono text-xs">{patient.personalInfo.insurance.policyNumber}</span>
+        </div>
+        <div className="flex justify-between text-sm">
+          <span className="text-gray-600">Records:</span>
+          <span className="font-medium">{patient.medicalHistory.length} entries</span>
+        </div>
+      </div>
+    </div>
+  );
+
+  const PatientDetailModal = ({ patient, onClose }: { patient: any; onClose: () => void }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <User className="w-8 h-8 mr-3" style={{ color: '#8B5CF6' }} />
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">{patient.name}</h2>
+                <p className="text-gray-600">Patient ID: {patient.id}</p>
+              </div>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <XCircle className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Personal Information */}
+            <div className="space-y-6">
+              <div className="bg-gray-50 p-6 rounded-xl">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Personal Information</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Age:</span>
+                    <span className="font-medium">{patient.personalInfo.age} years</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Blood Type:</span>
+                    <span className="font-medium">{patient.personalInfo.bloodType}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Allergies:</span>
+                    <div className="flex flex-wrap gap-1">
+                      {patient.personalInfo.allergies.map((allergy: string, index: number) => (
+                        <span key={index} className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                          {allergy}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-6 rounded-xl">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Insurance Information</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Provider:</span>
+                    <span className="font-medium">{patient.personalInfo.insurance.provider}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Policy Number:</span>
+                    <span className="font-mono text-sm">{patient.personalInfo.insurance.policyNumber}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-gray-50 p-6 rounded-xl">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Emergency Contact</h3>
+                <div className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Name:</span>
+                    <span className="font-medium">{patient.personalInfo.emergencyContact.name}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Relationship:</span>
+                    <span className="font-medium">{patient.personalInfo.emergencyContact.relationship}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Phone:</span>
+                    <span className="font-medium">{patient.personalInfo.emergencyContact.phone}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Medical History */}
+            <div className="space-y-6">
+              <div className="bg-gray-50 p-6 rounded-xl">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Medical History</h3>
+                <div className="space-y-3">
+                  {patient.medicalHistory.map((record: any, index: number) => (
+                    <div key={index} className="p-4 bg-white rounded-lg border-l-4 border-purple-500">
+                      <div className="flex justify-between items-start mb-2">
+                        <h4 className="font-semibold text-gray-800">{record.type}</h4>
+                        <span className="text-sm text-gray-500">{record.date}</span>
+                      </div>
+                      <p className="text-gray-700 mb-2">{record.medication || record.notes}</p>
+                      {record.details && <p className="text-sm text-gray-600">{record.details}</p>}
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                        {record.doctor && (
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+                            👨‍⚕️ {record.doctor}
+                          </span>
+                        )}
+                        {record.pharmacy && (
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                            🏥 {record.pharmacy}
+                          </span>
+                        )}
+                        <span className="bg-gray-100 text-gray-600 px-2 py-1 rounded-full font-mono">
+                          🔗 {record.hash.slice(0, 12)}...
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header title="Insurer Portal" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
+      
+      <div className="max-w-7xl mx-auto p-4 sm:p-8">
+        <div className="grid lg:grid-cols-4 gap-8">
+          {/* Patient Search & Biometric */}
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white p-6 rounded-2xl shadow-xl">
+              <div className="flex items-center mb-4">
+                <Search className="w-6 h-6 mr-3" style={{ color: '#8B5CF6' }} />
+                <h3 className="text-lg font-semibold text-gray-800">Search Patients</h3>
+              </div>
+              
+              <input
+                type="text"
+                placeholder="Search by name or ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full p-3 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200 mb-4"
+                style={{ borderColor: '#8B5CF6' }}
+              />
+
+              <button
+                onClick={() => setShowBiometricAuth(true)}
+                className="w-full py-3 px-4 font-medium text-white rounded-xl transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl flex items-center justify-center"
+                style={{ backgroundColor: '#8B5CF6' }}
+              >
+                <Fingerprint className="w-5 h-5 mr-2" />
+                Biometric Search
+              </button>
+            </div>
+
+            {/* Analytics Summary */}
+            <div className="bg-white p-6 rounded-2xl shadow-xl">
+              <div className="flex items-center mb-4">
+                <BarChart3 className="w-6 h-6 mr-3" style={{ color: '#8B5CF6' }} />
+                <h3 className="text-lg font-semibold text-gray-800">Analytics</h3>
+              </div>
+              
+              <div className="space-y-4">
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-purple-600">{DUMMY_DATA.biometricPatients.length}</div>
+                  <div className="text-sm text-gray-600">Total Patients</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-green-600">
+                    {DUMMY_DATA.biometricPatients.reduce((acc, p) => acc + p.medicalHistory.length, 0)}
+                  </div>
+                  <div className="text-sm text-gray-600">Medical Records</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-3xl font-bold text-blue-600">98%</div>
+                  <div className="text-sm text-gray-600">Data Accuracy</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Patient List */}
+          <div className="lg:col-span-3">
+            <div className="bg-white p-8 rounded-2xl shadow-xl">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center">
+                  <Database className="w-8 h-8 mr-3" style={{ color: '#8B5CF6' }} />
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-800">Patient Database</h2>
+                    <p className="text-gray-600">Access comprehensive patient information</p>
+                  </div>
+                </div>
+                <div className="text-sm text-gray-500">
+                  {filteredPatients.length} patients found
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                {filteredPatients.map((patient) => (
+                  <PatientCard key={patient.id} patient={patient} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {showProfile && (
+        <Profile
+          role="Insurer"
+          profileData={PROFILE_DATA.Insurer}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
+
+      {showBiometricAuth && (
+        <BiometricAuth
+          onSuccess={handleBiometricAuth}
+          onClose={() => setShowBiometricAuth(false)}
+          mode="login"
+        />
+      )}
+
+      {selectedPatient && (
+        <PatientDetailModal
+          patient={selectedPatient}
+          onClose={() => setSelectedPatient(null)}
         />
       )}
     </div>
@@ -2383,6 +3093,8 @@ const App = () => {
         return (props: any) => <DoctorPortal {...props} walletAddress={connectedWallet} onDisconnect={handleDisconnect} />;
       case 'Patient':
         return (props: any) => <PatientPortal {...props} walletAddress={connectedWallet} onDisconnect={handleDisconnect} />;
+      case 'Insurer':
+        return (props: any) => <InsurerPortal {...props} walletAddress={connectedWallet} onDisconnect={handleDisconnect} />;
       default:
         return () => <WalletConnectionScreen onWalletConnect={handleWalletConnect} onPublicSearch={() => setShowPublicSearch(true)} />;
     }
