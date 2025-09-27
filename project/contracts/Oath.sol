@@ -9,6 +9,7 @@ contract Oath {
     mapping(string => DispensingRecord[]) public dispensingHistory;
     mapping(string => Prescription) public prescriptions;
     mapping(address => string[]) public prescriptionsByDoctor;
+    mapping(address => string[]) public prescriptionsByPatient;
     
     address public admin;
     uint256 public batchCounter;
@@ -345,6 +346,9 @@ contract Oath {
         // Add prescription to doctor's prescription list
         prescriptionsByDoctor[msg.sender].push(prescriptionId);
         
+        // Add prescription to patient's prescription list
+        prescriptionsByPatient[_patient].push(prescriptionId);
+        
         prescriptionCounter++;
         
         emit PrescriptionCreated(_patient, msg.sender, prescriptionId, _medicineName, _dosage, _quantity, block.timestamp);
@@ -419,6 +423,49 @@ contract Oath {
         }
         
         return (ids, patients, medicineNames, dosages, quantities, timestamps);
+    }
+    
+    function getPrescriptionsByPatient(address _patient) public view returns (string[] memory) {
+        require(_patient != address(0), "Invalid patient address");
+        return prescriptionsByPatient[_patient];
+    }
+    
+    function getPrescriptionCountByPatient(address _patient) public view returns (uint256) {
+        require(_patient != address(0), "Invalid patient address");
+        return prescriptionsByPatient[_patient].length;
+    }
+    
+    function getPrescriptionDetailsByPatient(address _patient) public view returns (
+        string[] memory,
+        address[] memory,
+        string[] memory,
+        string[] memory,
+        uint256[] memory,
+        uint256[] memory
+    ) {
+        require(_patient != address(0), "Invalid patient address");
+        
+        string[] memory prescriptionIds = prescriptionsByPatient[_patient];
+        uint256 length = prescriptionIds.length;
+        
+        string[] memory ids = new string[](length);
+        address[] memory doctors = new address[](length);
+        string[] memory medicineNames = new string[](length);
+        string[] memory dosages = new string[](length);
+        uint256[] memory quantities = new uint256[](length);
+        uint256[] memory timestamps = new uint256[](length);
+        
+        for (uint256 i = 0; i < length; i++) {
+            Prescription memory prescription = prescriptions[prescriptionIds[i]];
+            ids[i] = prescription.prescriptionId;
+            doctors[i] = prescription.doctor;
+            medicineNames[i] = prescription.medicineName;
+            dosages[i] = prescription.dosage;
+            quantities[i] = prescription.quantity;
+            timestamps[i] = prescription.timestamp;
+        }
+        
+        return (ids, doctors, medicineNames, dosages, quantities, timestamps);
     }
     
     function _toHexString(uint256 value) internal pure returns (string memory) {
