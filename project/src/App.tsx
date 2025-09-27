@@ -6,7 +6,7 @@ import { contractService } from './services/contractService';
 declare global {
   interface Window {
     ethereum?: {
-      request: (args: { method: string }) => Promise<string[]>;
+      request: (args: { method: string; params?: any[] }) => Promise<any>;
     };
     showProfile?: () => void;
   }
@@ -1813,10 +1813,15 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
     patientWallet: '',
     medicineName: '',
     dosage: '',
-    duration: ''
+    quantity: ''
   });
   const [searchPatient, setSearchPatient] = useState('');
   const [showProfile, setShowProfile] = useState(false);
+  const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [isPrescribing, setIsPrescribing] = useState(false);
+  const [prescriptionResult, setPrescriptionResult] = useState<{ prescriptionId: string; transactionHash: string } | null>(null);
 
   // Set up global profile handler
   React.useEffect(() => {
@@ -1826,18 +1831,134 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
     };
   }, []);
 
+  const handleDirectWalletConnect = async () => {
+    setIsConnecting(true);
+    setConnectionError(null);
+    
+    try {
+      // Add timeout to prevent infinite loading
+      const connectionPromise = contractService.connectWallet();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout. Please try again.')), 30000)
+      );
+      
+      const address = await Promise.race([connectionPromise, timeoutPromise]) as string;
+      
+      // Check if user is on the correct network
+      const network = await contractService.getNetwork();
+      if (network.chainId !== 11155111) { // Sepolia chain ID
+        await contractService.switchToSepolia();
+      }
+      
+      await Promise.all([
+        contractService.isManufacturer(address),
+        contractService.isPharmacy(address),
+        contractService.isDoctor(address)
+      ]);
+
+      setConnectedAddress(address);
+    } catch (error: any) {
+      console.error('Error connecting wallet:', error);
+      setConnectionError(error.message || 'Failed to connect wallet. Please make sure MetaMask is installed and unlocked.');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
+
   const handlePrescribe = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Simulate blockchain transaction
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    if (!prescriptionData.patientWallet || !prescriptionData.medicineName || !prescriptionData.dosage || !prescriptionData.quantity) {
+      alert('Please fill in all fields');
+      return;
+    }
     
-    const hash = `0x${Math.random().toString(16).slice(2, 18)}`;
-    alert(`✓ Prescription minted successfully!\n✓ Transaction Hash: ${hash}\n✓ Patient notified via ENS`);
+    setIsPrescribing(true);
     
-    // Reset form
-    setPrescriptionData({ patientWallet: '', medicineName: '', dosage: '', duration: '' });
+    try {
+      // Use the contract service to prescribe medicine
+      const result = await contractService.prescribeMedicine(
+        prescriptionData.patientWallet,
+        prescriptionData.medicineName,
+        prescriptionData.dosage,
+        parseInt(prescriptionData.quantity)
+      );
+      
+      // Set prescription result to show in UI
+      setPrescriptionResult(result);
+      
+      // Reset form
+      setPrescriptionData({ patientWallet: '', medicineName: '', dosage: '', quantity: '' });
+    } catch (error: any) {
+      console.error('Prescription error:', error);
+      alert(`Failed to issue prescription: ${error.message}`);
+    } finally {
+      setIsPrescribing(false);
+    }
   };
+
+  const PrescriptionSuccessModal = ({ result, onClose }: { result: { prescriptionId: string; transactionHash: string }; onClose: () => void }) => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+        <div className="p-8">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: THEME.SUCCESS + '20' }}>
+              <CheckCircle className="w-8 h-8" style={{ color: THEME.SUCCESS }} />
+            </div>
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">Prescription Issued Successfully!</h3>
+            <p className="text-gray-600">Your prescription has been recorded on the blockchain</p>
+          </div>
+
+          <div className="space-y-4 mb-6">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-600">Prescription ID:</span>
+                <button
+                  onClick={() => navigator.clipboard.writeText(result.prescriptionId)}
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  Copy
+                </button>
+              </div>
+              <p className="font-mono text-sm text-gray-800 break-all">{result.prescriptionId}</p>
+            </div>
+
+            <div className="bg-gray-50 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-600">Transaction Hash:</span>
+                <button
+                  onClick={() => navigator.clipboard.writeText(result.transactionHash)}
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  Copy
+                </button>
+              </div>
+              <p className="font-mono text-sm text-gray-800 break-all">{result.transactionHash}</p>
+            </div>
+          </div>
+
+          <div className="flex space-x-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-3 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded-lg transition-colors"
+            >
+              Close
+            </button>
+            <button
+              onClick={() => {
+                const url = `https://sepolia.etherscan.io/tx/${result.transactionHash}`;
+                window.open(url, '_blank');
+              }}
+              className="flex-1 py-3 px-4 font-medium text-white rounded-lg transition-colors"
+              style={{ backgroundColor: THEME.PRIMARY }}
+            >
+              View on Etherscan
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 
   const PatientHistoryCard = ({ item }: { item: any }) => {
     const getTypeColor = (type: string) => {
@@ -1897,45 +2018,90 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
       <Header title="Doctor Portal" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
       
       <div className="max-w-7xl mx-auto p-4 sm:p-8">
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Issue Prescription */}
-          <div className="bg-white p-8 rounded-2xl shadow-xl">
-            <div className="flex items-center mb-6">
-              <FileText className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
-              <div>
-                <h2 className="text-2xl font-bold" style={{ color: THEME.PRIMARY }}>Issue Prescription</h2>
-                <p className="text-gray-600">Create blockchain-backed prescription</p>
-              </div>
+        {!connectedAddress ? (
+          <div className="max-w-2xl mx-auto">
+            <div className="text-center mb-8">
+              <User className="w-16 h-16 mx-auto mb-4 text-blue-600" />
+              <h2 className="text-3xl font-bold text-gray-800 mb-4">Doctor Portal</h2>
+              <p className="text-lg text-gray-600 mb-8">
+                Connect your wallet to access prescription issuing and patient management features.
+              </p>
             </div>
-
-            <form onSubmit={handlePrescribe} className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Patient Wallet / ENS</label>
-                <input
-                  type="text"
-                  placeholder="0x742d...A9c8 or jane.eth"
-                  value={prescriptionData.patientWallet}
-                  onChange={(e) => setPrescriptionData(prev => ({...prev, patientWallet: e.target.value}))}
-                  className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
-                  style={{ borderColor: THEME.PRIMARY }}
-                  required
-                />
+            
+            <div className="bg-white rounded-2xl shadow-xl p-8">
+              <div className="text-center mb-6">
+                <Wallet className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">Connect Your Wallet</h3>
+                <p className="text-gray-600">Connect to Sepolia testnet to access doctor features</p>
+              </div>
+              
+              {connectionError && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center">
+                    <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
+                    <span className="text-red-700 text-sm">{connectionError}</span>
+                  </div>
+                </div>
+              )}
+              
+              <button
+                onClick={handleDirectWalletConnect}
+                disabled={isConnecting}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-4 px-6 rounded-lg transition-colors flex items-center justify-center"
+              >
+                {isConnecting ? (
+                  <>
+                    <div className="animate-spin w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                    Connecting...
+                  </>
+                ) : (
+                  <>
+                    <Wallet className="w-5 h-5 mr-2" />
+                    Connect Wallet
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="grid lg:grid-cols-2 gap-8">
+            {/* Issue Prescription */}
+            <div className="bg-white p-8 rounded-2xl shadow-xl">
+              <div className="flex items-center mb-6">
+                <FileText className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
+                <div>
+                  <h2 className="text-2xl font-bold" style={{ color: THEME.PRIMARY }}>Issue Prescription</h2>
+                  <p className="text-gray-600">Create blockchain-backed prescription</p>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Medicine Name</label>
-                <input
-                  type="text"
-                  placeholder="e.g., Paracetamol 500mg"
-                  value={prescriptionData.medicineName}
-                  onChange={(e) => setPrescriptionData(prev => ({...prev, medicineName: e.target.value}))}
-                  className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
-                  style={{ borderColor: THEME.PRIMARY }}
-                  required
-                />
-              </div>
+              <form onSubmit={handlePrescribe} className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Patient Wallet Address</label>
+                  <input
+                    type="text"
+                    placeholder="0x742d...A9c8"
+                    value={prescriptionData.patientWallet}
+                    onChange={(e) => setPrescriptionData(prev => ({...prev, patientWallet: e.target.value}))}
+                    className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
+                    style={{ borderColor: THEME.PRIMARY }}
+                    required
+                  />
+                </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Medicine Name</label>
+                  <input
+                    type="text"
+                    placeholder="e.g., Paracetamol 500mg"
+                    value={prescriptionData.medicineName}
+                    onChange={(e) => setPrescriptionData(prev => ({...prev, medicineName: e.target.value}))}
+                    className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
+                    style={{ borderColor: THEME.PRIMARY }}
+                    required
+                  />
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Dosage & Frequency</label>
                   <input
@@ -1948,74 +2114,85 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
                     required
                   />
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
                   <input
                     type="number"
-                    placeholder="7"
-                    value={prescriptionData.duration}
-                    onChange={(e) => setPrescriptionData(prev => ({...prev, duration: e.target.value}))}
+                    placeholder="Enter quantity"
+                    value={prescriptionData.quantity}
+                    onChange={(e) => setPrescriptionData(prev => ({...prev, quantity: e.target.value}))}
                     className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
                     style={{ borderColor: THEME.PRIMARY }}
                     required
                   />
                 </div>
-              </div>
 
-              <button
-                type="submit"
-                className="w-full py-4 font-bold text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] flex items-center justify-center"
-                style={{ backgroundColor: THEME.SECONDARY }}
-              >
-                <Pill className="w-5 h-5 mr-3" />
-                Mint Prescription Record
-              </button>
-            </form>
-          </div>
-
-          {/* Patient History */}
-          <div className="bg-white p-8 rounded-2xl shadow-xl">
-            <div className="flex items-center mb-6">
-              <User className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
-              <div>
-                <h2 className="text-2xl font-bold" style={{ color: THEME.PRIMARY }}>Patient History</h2>
-                <p className="text-gray-600">View patient medical records</p>
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="Search patient ENS (e.g., jane.eth)"
-                  value={searchPatient}
-                  onChange={(e) => setSearchPatient(e.target.value)}
-                  className="flex-1 p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
-                  style={{ borderColor: THEME.PRIMARY }}
-                />
-                <button className="px-6 py-4 font-medium text-white rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center"
-                        style={{ backgroundColor: THEME.PRIMARY }}>
-                  <Search className="w-5 h-5" />
+                <button
+                  type="submit"
+                  disabled={isPrescribing}
+                  className="w-full py-4 font-bold text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  style={{ backgroundColor: THEME.SECONDARY }}
+                >
+                  {isPrescribing ? (
+                    <>
+                      <div className="animate-spin w-5 h-5 mr-3 border-2 border-white border-t-transparent rounded-full"></div>
+                      Issuing Prescription...
+                    </>
+                  ) : (
+                    <>
+                      <Pill className="w-5 h-5 mr-3" />
+                      Issue Prescription
+                    </>
+                  )}
                 </button>
-              </div>
+              </form>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-800">Records for jane.eth</h3>
-                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                  {DUMMY_DATA.patientHistory.length} records
-                </span>
+            {/* Patient History */}
+            <div className="bg-white p-8 rounded-2xl shadow-xl">
+              <div className="flex items-center mb-6">
+                <User className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
+                <div>
+                  <h2 className="text-2xl font-bold" style={{ color: THEME.PRIMARY }}>Patient History</h2>
+                  <p className="text-gray-600">View patient medical records</p>
+                </div>
               </div>
-              
-              <div className="space-y-4 max-h-96 overflow-y-auto">
-                {DUMMY_DATA.patientHistory.map((item, index) => (
-                  <PatientHistoryCard key={index} item={item} />
-                ))}
+
+              <div className="mb-6">
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Search patient wallet address"
+                    value={searchPatient}
+                    onChange={(e) => setSearchPatient(e.target.value)}
+                    className="flex-1 p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
+                    style={{ borderColor: THEME.PRIMARY }}
+                  />
+                  <button className="px-6 py-4 font-medium text-white rounded-xl transition-all duration-300 shadow-md hover:shadow-lg flex items-center"
+                          style={{ backgroundColor: THEME.PRIMARY }}>
+                    <Search className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Patient Records</h3>
+                  <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                    {DUMMY_DATA.patientHistory.length} records
+                  </span>
+                </div>
+                
+                <div className="space-y-4 max-h-96 overflow-y-auto">
+                  {DUMMY_DATA.patientHistory.map((item, index) => (
+                    <PatientHistoryCard key={index} item={item} />
+                  ))}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
       {showProfile && (
@@ -2023,6 +2200,13 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
           role="Doctor"
           profileData={PROFILE_DATA.Doctor}
           onClose={() => setShowProfile(false)}
+        />
+      )}
+
+      {prescriptionResult && (
+        <PrescriptionSuccessModal
+          result={prescriptionResult}
+          onClose={() => setPrescriptionResult(null)}
         />
       )}
     </div>

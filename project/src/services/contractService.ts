@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { OATH_ABI, OATH_CONTRACT_ADDRESS, Batch, Prescription, DispensingRecord } from '../contracts/OathABI';
+import { OATH_ABI, OATH_CONTRACT_ADDRESS, Batch, Prescription } from '../contracts/OathABI';
 
 export class ContractService {
   private contract: ethers.Contract | null = null;
@@ -34,7 +34,7 @@ export class ContractService {
       
       // Re-initialize provider and contract with the connected account
       this.provider = new ethers.BrowserProvider(window.ethereum);
-      this.signer = await this.provider.getSigner();
+      this.signer = await (this.provider as ethers.BrowserProvider).getSigner();
       this.contract = new ethers.Contract(OATH_CONTRACT_ADDRESS, OATH_ABI, this.signer);
       
       return account;
@@ -227,10 +227,49 @@ export class ContractService {
     medicineName: string,
     dosage: string,
     quantity: number
-  ): Promise<string> {
+  ): Promise<{ prescriptionId: string; transactionHash: string }> {
     if (!this.contract) throw new Error('Contract not initialized');
     
-    return await this.contract.prescribeMedicine(patient, medicineName, dosage, quantity);
+    try {
+      const tx = await this.contract.prescribeMedicine(patient, medicineName, dosage, quantity);
+      const receipt = await tx.wait();
+      
+      if (!receipt) {
+        throw new Error('Transaction failed');
+      }
+      
+      // Extract prescription ID from transaction logs
+      // The prescription ID is typically emitted in an event
+      let prescriptionId = '';
+      
+      if (receipt.logs && receipt.logs.length > 0) {
+        // Look for the PrescriptionCreated event
+        for (const log of receipt.logs) {
+          try {
+            const parsed = this.contract?.interface.parseLog(log);
+            if (parsed && parsed.name === 'PrescriptionCreated') {
+              prescriptionId = parsed.args.prescriptionId || parsed.args[0];
+              break;
+            }
+          } catch (e) {
+            // Continue searching through logs
+            continue;
+          }
+        }
+      }
+      
+      // If no event found, generate a prescription ID based on transaction hash
+      if (!prescriptionId) {
+        prescriptionId = `PRESCRIPTION-${receipt.hash.slice(2, 10).toUpperCase()}`;
+      }
+      
+      return {
+        prescriptionId,
+        transactionHash: receipt.hash
+      };
+    } catch (error: any) {
+      throw new Error(`Failed to prescribe medicine: ${error.message}`);
+    }
   }
 
   async getPrescription(prescriptionId: string): Promise<Prescription> {
