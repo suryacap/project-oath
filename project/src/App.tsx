@@ -1162,7 +1162,7 @@ const ManufacturerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole:
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Medicine Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Medicine Name/ENS</label>
                   <input
                     type="text"
                     placeholder="e.g., Ibuprofen 200mg"
@@ -1200,7 +1200,31 @@ const ManufacturerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole:
                   />
                 </div>
               </div>
-
+              <div className="grid sm:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Price</label>
+                  <input
+                    type="number"
+                    placeholder="10000"
+                    value={formData.quantity}
+                    onChange={(e) => handleInputChange('quantity', e.target.value)}
+                    className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
+                    style={{ borderColor: THEME.PRIMARY }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
+                  <input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => handleInputChange('date', e.target.value)}
+                    className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
+                    style={{ borderColor: THEME.PRIMARY }}
+                    required
+                  />
+                </div>
+              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Manufacturer Receipt (JSON File)
@@ -1651,7 +1675,7 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Duration (days)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
                   <input
                     type="number"
                     placeholder="7"
