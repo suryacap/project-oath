@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react';
+import ManufacturerBatchMint from './components/ManufacturerBatchMint';
+import { contractService } from './services/contractService';
 
 // TypeScript declaration for ethereum and global functions
 declare global {
@@ -27,7 +29,6 @@ import {
   Award,
   Activity,
   AlertTriangle,
-  CheckCircle2,
   Package,
   Link,
   Zap
@@ -1190,15 +1191,12 @@ const Header = ({ title, setRole, walletAddress, onDisconnect }: { title: string
 
 // Manufacturer Portal Components
 const ManufacturerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role: string | null) => void; walletAddress?: string; onDisconnect?: () => void }) => {
-  const [formData, setFormData] = useState({
-    batchId: '',
-    medicineName: '',
-    quantity: '',
-    date: ''
-  });
-  const [lastHash, setLastHash] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showBatchMint, setShowBatchMint] = useState(false);
+  const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
+  const [, setUserRole] = useState<string | null>(null);
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   // Set up global profile handler
   React.useEffect(() => {
@@ -1208,23 +1206,54 @@ const ManufacturerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole:
     };
   }, []);
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+
+  const handleDirectWalletConnect = async () => {
+    setIsConnecting(true);
+    setConnectionError(null);
+    
+    try {
+      // Add timeout to prevent infinite loading
+      const connectionPromise = contractService.connectWallet();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Connection timeout. Please try again.')), 30000)
+      );
+      
+      const address = await Promise.race([connectionPromise, timeoutPromise]) as string;
+      
+      // Check if user is on the correct network
+      const network = await contractService.getNetwork();
+      if (network.chainId !== 11155111) { // Sepolia chain ID
+        await contractService.switchToSepolia();
+      }
+      
+      const [isManufacturer, isPharmacy, isDoctor] = await Promise.all([
+        contractService.isManufacturer(address),
+        contractService.isPharmacy(address),
+        contractService.isDoctor(address)
+      ]);
+
+      let role = 'Patient';
+      if (isManufacturer) {
+        role = 'Manufacturer';
+      } else if (isPharmacy) {
+        role = 'Pharmacy';
+      } else if (isDoctor) {
+        role = 'Doctor';
+      }
+
+      setConnectedAddress(address);
+      setUserRole(role);
+    } catch (error: any) {
+      console.error('Error connecting wallet:', error);
+      setConnectionError(error.message || 'Failed to connect wallet. Please make sure MetaMask is installed and unlocked.');
+    } finally {
+      setIsConnecting(false);
+    }
   };
 
-  const handleMint = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
-    // Simulate blockchain transaction delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const newHash = `0x${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}`;
-    setLastHash(newHash);
-    setIsSubmitting(false);
-    
-    // Reset form
-    setFormData({ batchId: '', medicineName: '', quantity: '', date: '' });
+  const handleBatchMinted = (batchId: string) => {
+    console.log('Batch minted:', batchId);
+    // You can add additional logic here, like showing a success message
   };
 
   const ComplianceScoreCard = () => (
@@ -1273,164 +1302,102 @@ const ManufacturerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole:
       <Header title="Manufacturer Portal" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
       
       <div className="max-w-7xl mx-auto p-4 sm:p-8">
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Minting Form */}
-          <div className="lg:col-span-2 bg-white p-8 rounded-2xl shadow-xl">
-            <div className="flex items-center mb-6">
-              <Factory className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
-              <div>
-                <h2 className="text-2xl font-bold" style={{ color: THEME.PRIMARY }}>
-                  Mint New Batch
-                </h2>
-                <p className="text-gray-600">Create blockchain proof for DSCSA compliance</p>
-              </div>
+        {!connectedAddress ? (
+          <div className="max-w-2xl mx-auto">
+            <div className="text-center mb-8">
+              <Factory className="w-16 h-16 mx-auto mb-4 text-blue-600" />
+              <h2 className="text-3xl font-bold text-gray-800 mb-4">Manufacturer Portal</h2>
+              <p className="text-lg text-gray-600 mb-8">
+                Connect your wallet to access batch minting and supply chain management features.
+              </p>
             </div>
+            
+            <div className="bg-white rounded-2xl shadow-xl p-8">
+              <div className="text-center mb-6">
+                <Wallet className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">Connect Your Wallet</h3>
+                <p className="text-gray-600">Connect to Sepolia testnet to access manufacturer features</p>
+              </div>
+              
+              {connectionError && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="flex items-center">
+                    <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
+                    <span className="text-red-700 text-sm">{connectionError}</span>
+                  </div>
+                </div>
+              )}
 
-            <form onSubmit={handleMint} className="space-y-6">
-              <div className="grid sm:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Batch ID</label>
-                  <input
-                    type="text"
-                    placeholder="e.g., BATCH-1234"
-                    value={formData.batchId}
-                    onChange={(e) => handleInputChange('batchId', e.target.value)}
-                    className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
-                    style={{ 
-                      borderColor: THEME.PRIMARY
-                    }}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Medicine Name/ENS</label>
-                  <input
-                    type="text"
-                    placeholder="e.g., Ibuprofen 200mg"
-                    value={formData.medicineName}
-                    onChange={(e) => handleInputChange('medicineName', e.target.value)}
-                    className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
-                    style={{ borderColor: THEME.PRIMARY }}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid sm:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
-                  <input
-                    type="number"
-                    placeholder="10000"
-                    value={formData.quantity}
-                    onChange={(e) => handleInputChange('quantity', e.target.value)}
-                    className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
-                    style={{ borderColor: THEME.PRIMARY }}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Manufacturing Date</label>
-                  <input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => handleInputChange('date', e.target.value)}
-                    className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
-                    style={{ borderColor: THEME.PRIMARY }}
-                    required
-                  />
-                </div>
-              </div>
-              <div className="grid sm:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Price</label>
-                  <input
-                    type="number"
-                    placeholder="10000"
-                    value={formData.quantity}
-                    onChange={(e) => handleInputChange('quantity', e.target.value)}
-                    className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
-                    style={{ borderColor: THEME.PRIMARY }}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date</label>
-                  <input
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => handleInputChange('date', e.target.value)}
-                    className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
-                    style={{ borderColor: THEME.PRIMARY }}
-                    required
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Manufacturer Receipt (JSON File)
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-gray-400 transition-colors duration-200">
-                  <Upload className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-                  <input 
-                    type="file" 
-                    accept=".json"
-                    className="hidden" 
-                    id="file-upload"
-                    required 
-                  />
-                  <label htmlFor="file-upload" className="cursor-pointer">
-                    <span className="text-lg font-medium text-gray-700">Click to upload</span>
-                    <p className="text-sm text-gray-500 mt-1">JSON files only, max 10MB</p>
-                  </label>
-                </div>
-              </div>
-
+              
               <button
-                type="submit"
-                disabled={isSubmitting}
-                className="w-full py-4 font-bold text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                style={{ backgroundColor: THEME.SECONDARY }}
+                onClick={handleDirectWalletConnect}
+                disabled={isConnecting}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-4 px-6 rounded-lg transition-colors flex items-center justify-center"
               >
-                {isSubmitting ? (
+                {isConnecting ? (
                   <>
-                    <div className="animate-spin w-5 h-5 mr-3 border-2 border-white border-t-transparent rounded-full"></div>
-                    Processing Transaction...
+                    <div className="animate-spin w-5 h-5 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                    Connecting...
                   </>
                 ) : (
                   <>
-                    <Package className="w-5 h-5 mr-3" />
-                    Mint Batch & Generate Hash
+                    <Wallet className="w-5 h-5 mr-2" />
+                    Connect Wallet
                   </>
                 )}
               </button>
-            </form>
-
-            {lastHash && (
-              <div className="mt-8 p-6 bg-green-50 rounded-xl border-l-4 border-green-500 animate-fade-in">
-                <div className="flex items-center mb-2">
-                  <CheckCircle2 className="w-6 h-6 mr-3 text-green-600" />
-                  <h4 className="font-bold text-green-800">Transaction Successful!</h4>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-green-700">
-                    <strong>On-Chain Hash:</strong> 
-                    <span className="font-mono text-xs ml-2 bg-white px-2 py-1 rounded border break-all">
-                      {lastHash}
-                    </span>
-                  </p>
-                  <p className="text-xs text-green-600">✓ Proof of Ownership stored on OATH Ledger</p>
-                </div>
-              </div>
-            )}
+            </div>
           </div>
+        ) : (
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Batch Minting Section */}
+            <div className="lg:col-span-2">
+              {showBatchMint ? (
+                <ManufacturerBatchMint onBatchMinted={handleBatchMinted} />
+              ) : (
+                <div className="bg-white p-8 rounded-2xl shadow-xl">
+                  <div className="flex items-center mb-6">
+                    <Factory className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
+                    <div>
+                      <h2 className="text-2xl font-bold" style={{ color: THEME.PRIMARY }}>
+                        Batch Management
+                      </h2>
+                      <p className="text-gray-600">Create and manage pharmaceutical batches</p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <button
+                      onClick={() => setShowBatchMint(true)}
+                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-4 px-6 rounded-lg transition-colors flex items-center justify-center"
+                    >
+                      <Factory className="w-5 h-5 mr-2" />
+                      Mint New Batch
+                    </button>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+                        <Package className="w-5 h-5 mr-2" />
+                        View Batches
+                      </button>
+                      <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+                        <Activity className="w-5 h-5 mr-2" />
+                        Analytics
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
-          {/* Compliance Score */}
-          <div className="lg:col-span-1">
-            <ComplianceScoreCard />
+            {/* Compliance Score */}
+            <div className="lg:col-span-1">
+              <ComplianceScoreCard />
+            </div>
           </div>
-        </div>
+        )}
       </div>
+
 
       {showProfile && (
         <Profile
