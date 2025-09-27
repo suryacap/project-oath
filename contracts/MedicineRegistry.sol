@@ -13,11 +13,19 @@ contract MedicineRegistry {
     }
 
     mapping(string => Medicine) public medicines; // Mapping from batchNo to Medicine
-    mapping(address => bool) public manufacturers; // Authorized manufacturers
+    address public manufacturer;
+
+    constructor() {
+        manufacturer = msg.sender;
+    }
 
     modifier onlyManufacturer() {
-        require(manufacturers[msg.sender], "Not an authorized manufacturer");
+        require(msg.sender == manufacturer, "Caller is not manufacturer");
         _;
+    }
+
+    function setManufacturer(address _manufacturer) public onlyManufacturer {
+        manufacturer = _manufacturer;
     }
 
     function addMedicine(
