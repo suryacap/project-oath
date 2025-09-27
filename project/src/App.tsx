@@ -780,116 +780,127 @@ const WalletConnectionScreen = ({ onWalletConnect, onPublicSearch }: { onWalletC
             <div className="mb-8">
               <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">Select Your Role & Connect</h3>
               <p className="text-center text-gray-600 mb-6">Choose your role and connect your MetaMask wallet to access your portal</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
-                <button
-                  onClick={() => handleConnectWithRole('Manufacturer')}
-                  disabled={isConnectingWithRole}
-                  className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ 
-                    borderColor: THEME.PRIMARY, 
-                    backgroundColor: selectedRole === 'Manufacturer' ? THEME.PRIMARY + '20' : THEME.PRIMARY + '10'
-                  }}
-                >
-                  <Factory className="w-8 h-8 mx-auto mb-2" style={{ color: THEME.PRIMARY }} />
-                  <h4 className="font-bold text-gray-800 mb-1">Manufacturer</h4>
-                  <p className="text-sm text-gray-600 mb-3">Mint drug batches</p>
-                  {isConnectingWithRole && selectedRole === 'Manufacturer' ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
-                      <span className="text-xs text-gray-600">Connecting...</span>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-500">Click to connect</div>
-                  )}
-                </button>
-                
-                <button
-                  onClick={() => handleConnectWithRole('Pharmacy')}
-                  disabled={isConnectingWithRole}
-                  className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ 
-                    borderColor: THEME.SECONDARY, 
-                    backgroundColor: selectedRole === 'Pharmacy' ? THEME.SECONDARY + '20' : THEME.SECONDARY + '10'
-                  }}
-                >
-                  <Building2 className="w-8 h-8 mx-auto mb-2" style={{ color: THEME.SECONDARY }} />
-                  <h4 className="font-bold text-gray-800 mb-1">Pharmacy</h4>
-                  <p className="text-sm text-gray-600 mb-3">Verify & dispense</p>
-                  {isConnectingWithRole && selectedRole === 'Pharmacy' ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
-                      <span className="text-xs text-gray-600">Connecting...</span>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-500">Click to connect</div>
-                  )}
-                </button>
-                
-                <button
-                  onClick={() => handleConnectWithRole('Doctor')}
-                  disabled={isConnectingWithRole}
-                  className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ 
-                    borderColor: THEME.SUCCESS, 
-                    backgroundColor: selectedRole === 'Doctor' ? THEME.SUCCESS + '20' : THEME.SUCCESS + '10'
-                  }}
-                >
-                  <User className="w-8 h-8 mx-auto mb-2" style={{ color: THEME.SUCCESS }} />
-                  <h4 className="font-bold text-gray-800 mb-1">Doctor</h4>
-                  <p className="text-sm text-gray-600 mb-3">Issue prescriptions</p>
-                  {isConnectingWithRole && selectedRole === 'Doctor' ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
-                      <span className="text-xs text-gray-600">Connecting...</span>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-500">Click to connect</div>
-                  )}
-                </button>
-                
-                <button
-                  onClick={() => handleConnectWithRole('Patient')}
-                  disabled={isConnectingWithRole}
-                  className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ 
-                    borderColor: THEME.WARNING, 
-                    backgroundColor: selectedRole === 'Patient' ? THEME.WARNING + '20' : THEME.WARNING + '10'
-                  }}
-                >
-                  <Activity className="w-8 h-8 mx-auto mb-2" style={{ color: THEME.WARNING }} />
-                  <h4 className="font-bold text-gray-800 mb-1">Patient</h4>
-                  <p className="text-sm text-gray-600 mb-3">View medical history</p>
-                  {isConnectingWithRole && selectedRole === 'Patient' ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
-                      <span className="text-xs text-gray-600">Connecting...</span>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-500">Click to connect</div>
-                  )}
-                </button>
-                
-                <button
-                  onClick={() => handleConnectWithRole('Insurer')}
-                  disabled={isConnectingWithRole}
-                  className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ 
-                    borderColor: '#8B5CF6', 
-                    backgroundColor: selectedRole === 'Insurer' ? '#8B5CF6' + '20' : '#8B5CF6' + '10'
-                  }}
-                >
-                  <BarChart3 className="w-8 h-8 mx-auto mb-2" style={{ color: '#8B5CF6' }} />
-                  <h4 className="font-bold text-gray-800 mb-1">Insurer</h4>
-                  <p className="text-sm text-gray-600 mb-3">Access patient data</p>
-                  {isConnectingWithRole && selectedRole === 'Insurer' ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
-                      <span className="text-xs text-gray-600">Connecting...</span>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-500">Click to connect</div>
-                  )}
-                </button>
+              
+              {/* Primary Roles - Healthcare Providers */}
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-gray-700 mb-4 text-center">Healthcare Providers</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                  <button
+                    onClick={() => handleConnectWithRole('Manufacturer')}
+                    disabled={isConnectingWithRole}
+                    className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ 
+                      borderColor: THEME.PRIMARY, 
+                      backgroundColor: selectedRole === 'Manufacturer' ? THEME.PRIMARY + '20' : THEME.PRIMARY + '10'
+                    }}
+                  >
+                    <Factory className="w-10 h-10 mx-auto mb-3" style={{ color: THEME.PRIMARY }} />
+                    <h4 className="font-bold text-gray-800 mb-2 text-lg">Drug Manufacturer</h4>
+                    <p className="text-sm text-gray-600 mb-3">Create & mint pharmaceutical batches</p>
+                    {isConnectingWithRole && selectedRole === 'Manufacturer' ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                        <span className="text-xs text-gray-600">Connecting...</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">Click to connect</div>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => handleConnectWithRole('Pharmacy')}
+                    disabled={isConnectingWithRole}
+                    className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ 
+                      borderColor: THEME.SECONDARY, 
+                      backgroundColor: selectedRole === 'Pharmacy' ? THEME.SECONDARY + '20' : THEME.SECONDARY + '10'
+                    }}
+                  >
+                    <Building2 className="w-10 h-10 mx-auto mb-3" style={{ color: THEME.SECONDARY }} />
+                    <h4 className="font-bold text-gray-800 mb-2 text-lg">Pharmacy</h4>
+                    <p className="text-sm text-gray-600 mb-3">Verify & dispense medications</p>
+                    {isConnectingWithRole && selectedRole === 'Pharmacy' ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                        <span className="text-xs text-gray-600">Connecting...</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">Click to connect</div>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => handleConnectWithRole('Doctor')}
+                    disabled={isConnectingWithRole}
+                    className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ 
+                      borderColor: THEME.SUCCESS, 
+                      backgroundColor: selectedRole === 'Doctor' ? THEME.SUCCESS + '20' : THEME.SUCCESS + '10'
+                    }}
+                  >
+                    <User className="w-10 h-10 mx-auto mb-3" style={{ color: THEME.SUCCESS }} />
+                    <h4 className="font-bold text-gray-800 mb-2 text-lg">Medical Doctor</h4>
+                    <p className="text-sm text-gray-600 mb-3">Issue prescriptions & access records</p>
+                    {isConnectingWithRole && selectedRole === 'Doctor' ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                        <span className="text-xs text-gray-600">Connecting...</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">Click to connect</div>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Secondary Roles - Patients & Insurers */}
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-gray-700 mb-4 text-center">Patients & Insurers</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                  <button
+                    onClick={() => handleConnectWithRole('Patient')}
+                    disabled={isConnectingWithRole}
+                    className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ 
+                      borderColor: THEME.WARNING, 
+                      backgroundColor: selectedRole === 'Patient' ? THEME.WARNING + '20' : THEME.WARNING + '10'
+                    }}
+                  >
+                    <Activity className="w-10 h-10 mx-auto mb-3" style={{ color: THEME.WARNING }} />
+                    <h4 className="font-bold text-gray-800 mb-2 text-lg">Patient</h4>
+                    <p className="text-sm text-gray-600 mb-3">Access medical history & records</p>
+                    {isConnectingWithRole && selectedRole === 'Patient' ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                        <span className="text-xs text-gray-600">Connecting...</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">Click to connect</div>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => handleConnectWithRole('Insurer')}
+                    disabled={isConnectingWithRole}
+                    className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ 
+                      borderColor: '#8B5CF6', 
+                      backgroundColor: selectedRole === 'Insurer' ? '#8B5CF6' + '20' : '#8B5CF6' + '10'
+                    }}
+                  >
+                    <BarChart3 className="w-10 h-10 mx-auto mb-3" style={{ color: '#8B5CF6' }} />
+                    <h4 className="font-bold text-gray-800 mb-2 text-lg">Insurance Provider</h4>
+                    <p className="text-sm text-gray-600 mb-3">Access patient data & analytics</p>
+                    {isConnectingWithRole && selectedRole === 'Insurer' ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                        <span className="text-xs text-gray-600">Connecting...</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">Click to connect</div>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
