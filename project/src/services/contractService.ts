@@ -403,6 +403,58 @@ export class ContractService {
       timestamps: result[5].map((t: any) => Number(t))
     };
   }
+
+  async getPrescriptionsByPatient(patientAddress: string): Promise<string[]> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized. Please connect your wallet first.');
+    }
+    
+    try {
+      console.log('Calling getPrescriptionsByPatient with address:', patientAddress);
+      const result = await this.contract.getPrescriptionsByPatient(patientAddress);
+      console.log('Contract call result (IDs only):', result);
+      
+      return result || [];
+    } catch (error: any) {
+      console.error('Error in getPrescriptionsByPatient:', error);
+      throw new Error(`Failed to fetch patient prescription IDs: ${error.message}`);
+    }
+  }
+
+  async getPrescriptionDetailsByPatient(patientAddress: string): Promise<{
+    ids: string[];
+    doctors: string[];
+    medicineNames: string[];
+    dosages: string[];
+    quantities: number[];
+    timestamps: number[];
+  }> {
+    if (!this.contract) {
+      throw new Error('Contract not initialized. Please connect your wallet first.');
+    }
+    
+    try {
+      console.log('Calling getPrescriptionDetailsByPatient with address:', patientAddress);
+      const result = await this.contract.getPrescriptionDetailsByPatient(patientAddress);
+      console.log('Contract call result:', result);
+      
+      if (!result || result.length !== 6) {
+        throw new Error('Invalid response from contract');
+      }
+      
+      return {
+        ids: result[0] || [],
+        doctors: result[1] || [],
+        medicineNames: result[2] || [],
+        dosages: result[3] || [],
+        quantities: (result[4] || []).map((q: any) => Number(q)),
+        timestamps: (result[5] || []).map((t: any) => Number(t))
+      };
+    } catch (error: any) {
+      console.error('Error in getPrescriptionDetailsByPatient:', error);
+      throw new Error(`Failed to fetch patient prescriptions: ${error.message}`);
+    }
+  }
 }
 
 // Create a singleton instance
