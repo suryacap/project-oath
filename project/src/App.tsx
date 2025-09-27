@@ -1334,7 +1334,10 @@ const ManufacturerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole:
               <button
                 onClick={handleDirectWalletConnect}
                 disabled={isConnecting}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-4 px-6 rounded-lg transition-colors flex items-center justify-center"
+                className="w-full text-white font-medium py-4 px-6 rounded-lg transition-colors flex items-center justify-center"
+                style={{ backgroundColor: THEME.PRIMARY }}
+                onMouseEnter={(e) => !isConnecting && (e.currentTarget.style.backgroundColor = '#003D33')}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = THEME.PRIMARY}
               >
                 {isConnecting ? (
                   <>
@@ -1344,7 +1347,7 @@ const ManufacturerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole:
                 ) : (
                   <>
                     <Wallet className="w-5 h-5 mr-2" />
-                    Connect Wallet
+                    Proceed to Dashboard
                   </>
                 )}
               </button>
@@ -1371,7 +1374,10 @@ const ManufacturerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole:
                   <div className="space-y-4">
                     <button
                       onClick={() => setShowBatchMint(true)}
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-4 px-6 rounded-lg transition-colors flex items-center justify-center"
+                      className="w-full text-white font-medium py-4 px-6 rounded-lg transition-colors flex items-center justify-center"
+                      style={{ backgroundColor: THEME.PRIMARY }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#003D33'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = THEME.PRIMARY}
                     >
                       <Factory className="w-5 h-5 mr-2" />
                       Mint New Batch
@@ -1674,7 +1680,10 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
               <button
                 onClick={handleDirectWalletConnect}
                 disabled={isConnecting}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-4 px-6 rounded-lg transition-colors flex items-center justify-center"
+                className="w-full text-white font-medium py-4 px-6 rounded-lg transition-colors flex items-center justify-center"
+                style={{ backgroundColor: THEME.PRIMARY }}
+                onMouseEnter={(e) => !isConnecting && (e.currentTarget.style.backgroundColor = '#003D33')}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = THEME.PRIMARY}
               >
                 {isConnecting ? (
                   <>
@@ -1684,7 +1693,7 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
                 ) : (
                   <>
                     <Wallet className="w-5 h-5 mr-2" />
-                    Connect Wallet
+                    Proceed to Dashboard
                   </>
                 )}
               </button>
@@ -2139,7 +2148,10 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
               <button
                 onClick={handleDirectWalletConnect}
                 disabled={isConnecting}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-4 px-6 rounded-lg transition-colors flex items-center justify-center"
+                className="w-full text-white font-medium py-4 px-6 rounded-lg transition-colors flex items-center justify-center"
+                style={{ backgroundColor: THEME.PRIMARY }}
+                onMouseEnter={(e) => !isConnecting && (e.currentTarget.style.backgroundColor = '#003D33')}
+                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = THEME.PRIMARY}
               >
                 {isConnecting ? (
                   <>
@@ -2149,7 +2161,7 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
                 ) : (
                   <>
                     <Wallet className="w-5 h-5 mr-2" />
-                    Connect Wallet
+                    Proceed to Dashboard
                   </>
                 )}
               </button>
@@ -2610,7 +2622,10 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
                     <button
                       onClick={handleDirectWalletConnect}
                       disabled={isConnecting}
-                      className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 text-sm"
+                      className="mt-4 px-4 py-2 text-white rounded-lg transition-colors disabled:opacity-50 text-sm"
+                      style={{ backgroundColor: THEME.PRIMARY }}
+                      onMouseEnter={(e) => !isConnecting && (e.currentTarget.style.backgroundColor = '#003D33')}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = THEME.PRIMARY}
                     >
                       {isConnecting ? 'Connecting...' : 'Connect Wallet'}
                     </button>
@@ -2698,7 +2713,10 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
                     <button
                       onClick={handleDirectWalletConnect}
                       disabled={isConnecting}
-                      className="mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                      className="mt-4 px-6 py-3 text-white rounded-lg transition-colors disabled:opacity-50"
+                      style={{ backgroundColor: THEME.PRIMARY }}
+                      onMouseEnter={(e) => !isConnecting && (e.currentTarget.style.backgroundColor = '#003D33')}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = THEME.PRIMARY}
                     >
                       {isConnecting ? 'Connecting...' : 'Connect Wallet'}
                     </button>

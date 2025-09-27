@@ -192,7 +192,10 @@ const WalletConnection: React.FC<WalletConnectionProps> = ({
         <button
           onClick={connectWallet}
           disabled={isConnecting}
-          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
+          className="w-full text-white font-medium py-3 px-6 rounded-lg transition-colors flex items-center justify-center"
+          style={{ backgroundColor: '#004D40' }}
+          onMouseEnter={(e) => !isConnecting && (e.currentTarget.style.backgroundColor = '#003D33')}
+          onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#004D40'}
         >
           {isConnecting ? (
             <>
