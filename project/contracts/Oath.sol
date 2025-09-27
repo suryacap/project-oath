@@ -4,12 +4,15 @@ pragma solidity ^0.8.0;
 contract Oath {
     mapping(address => bool) public manufacturers;
     mapping(address => bool) public pharmacies;
+    mapping(address => bool) public doctors;
     mapping(string => Batch) public batches;
     mapping(string => DispensingRecord[]) public dispensingHistory;
+    mapping(string => Prescription) public prescriptions;
     
     address public admin;
     uint256 public batchCounter;
     uint256 public dispensingCounter;
+    uint256 public prescriptionCounter;
     
     struct Batch {
         string batchId;
@@ -24,11 +27,23 @@ contract Oath {
     
     struct DispensingRecord {
         string batchId;
+        string prescriptionId;
         address patient;
         address doctor;
         address pharmacy;
         uint256 timestamp;
         uint256 quantity;
+        bool exists;
+    }
+    
+    struct Prescription {
+        string prescriptionId;
+        address patient;
+        address doctor;
+        string medicineName;
+        string dosage;
+        uint256 quantity;
+        uint256 timestamp;
         bool exists;
     }
     
@@ -44,6 +59,11 @@ contract Oath {
     
     modifier onlyPharmacy() {
         require(pharmacies[msg.sender], "Caller is not an enrolled pharmacy");
+        _;
+    }
+    
+    modifier onlyDoctor() {
+        require(doctors[msg.sender], "Caller is not an enrolled doctor");
         _;
     }
 
@@ -71,6 +91,16 @@ contract Oath {
     function deactivatePharmacy(address _pharmacyAddress) public onlyAdmin {
         require(pharmacies[_pharmacyAddress], "Pharmacy not active");
         pharmacies[_pharmacyAddress] = false;
+    }
+    
+    function enrollDoctor(address _doctorAddress) public onlyAdmin {
+        require(!doctors[_doctorAddress], "Doctor already enrolled");
+        doctors[_doctorAddress] = true;
+    }
+
+    function deactivateDoctor(address _doctorAddress) public onlyAdmin {
+        require(doctors[_doctorAddress], "Doctor not active");
+        doctors[_doctorAddress] = false;
     }
     
     function mintNewBatch(
@@ -180,15 +210,24 @@ contract Oath {
     
     function dispenseDrug(
         string memory _batchId,
+        string memory _prescriptionId,
         address _patient,
         address _doctor,
         uint256 _quantity
     ) public onlyPharmacy returns (bool) {
         require(bytes(_batchId).length > 0, "Batch ID cannot be empty");
+        require(bytes(_prescriptionId).length > 0, "Prescription ID cannot be empty");
         require(_patient != address(0), "Invalid patient address");
         require(_doctor != address(0), "Invalid doctor address");
         require(_quantity > 0, "Quantity must be greater than 0");
         require(batches[_batchId].exists, "Batch does not exist");
+        require(prescriptions[_prescriptionId].exists, "Prescription does not exist");
+        
+        // Validate prescription details
+        Prescription memory prescription = prescriptions[_prescriptionId];
+        require(prescription.patient == _patient, "Prescription patient does not match");
+        require(prescription.doctor == _doctor, "Prescription doctor does not match");
+        require(prescription.quantity >= _quantity, "Prescription quantity insufficient");
         
         Batch storage batch = batches[_batchId];
         
@@ -207,6 +246,7 @@ contract Oath {
         // Create dispensing record
         DispensingRecord memory record = DispensingRecord({
             batchId: _batchId,
+            prescriptionId: _prescriptionId,
             patient: _patient,
             doctor: _doctor,
             pharmacy: msg.sender,
@@ -219,12 +259,13 @@ contract Oath {
         dispensingHistory[_batchId].push(record);
         dispensingCounter++;
         
-        emit DrugDispensed(_batchId, _patient, _doctor, msg.sender, _quantity, block.timestamp);
+        emit DrugDispensed(_batchId, _prescriptionId, _patient, _doctor, msg.sender, _quantity, block.timestamp);
         
         return true;
     }
     
     function getDispensingHistory(string memory _batchId) public view returns (
+        string[] memory,
         address[] memory,
         address[] memory,
         address[] memory,
@@ -236,6 +277,7 @@ contract Oath {
         DispensingRecord[] memory records = dispensingHistory[_batchId];
         uint256 length = records.length;
         
+        string[] memory prescriptionIds = new string[](length);
         address[] memory _patients = new address[](length);
         address[] memory _doctors = new address[](length);
         address[] memory _pharmacies = new address[](length);
@@ -243,6 +285,7 @@ contract Oath {
         uint256[] memory timestamps = new uint256[](length);
         
         for (uint256 i = 0; i < length; i++) {
+            prescriptionIds[i] = records[i].prescriptionId;
             _patients[i] = records[i].patient;
             _doctors[i] = records[i].doctor;
             _pharmacies[i] = records[i].pharmacy;
@@ -250,11 +293,110 @@ contract Oath {
             timestamps[i] = records[i].timestamp;
         }
         
-        return (_patients, _doctors, _pharmacies, quantities, timestamps);
+        return (prescriptionIds, _patients, _doctors, _pharmacies, quantities, timestamps);
     }
     
     function getTotalDispensings() public view returns (uint256) {
         return dispensingCounter;
+    }
+    
+    function prescribeMedicine(
+        address _patient,
+        string memory _medicineName,
+        string memory _dosage,
+        uint256 _quantity
+    ) public onlyDoctor returns (string memory) {
+        require(_patient != address(0), "Invalid patient address");
+        require(bytes(_medicineName).length > 0, "Medicine name cannot be empty");
+        require(bytes(_dosage).length > 0, "Dosage cannot be empty");
+        require(_quantity > 0, "Quantity must be greater than 0");
+        
+        // Generate unique prescription ID using keccak256 hash
+        string memory prescriptionId = string(abi.encodePacked(
+            "Rx_",
+            _toHexString(uint160(msg.sender)),
+            "_",
+            _toHexString(uint160(_patient)),
+            "_",
+            _toHexString(block.timestamp),
+            "_",
+            _toHexString(prescriptionCounter)
+        ));
+        
+        // Ensure prescription ID is unique
+        require(!prescriptions[prescriptionId].exists, "Prescription ID collision");
+        
+        // Create prescription record
+        Prescription memory prescription = Prescription({
+            prescriptionId: prescriptionId,
+            patient: _patient,
+            doctor: msg.sender,
+            medicineName: _medicineName,
+            dosage: _dosage,
+            quantity: _quantity,
+            timestamp: block.timestamp,
+            exists: true
+        });
+        
+        // Store the prescription
+        prescriptions[prescriptionId] = prescription;
+        prescriptionCounter++;
+        
+        emit PrescriptionCreated(prescriptionId, _patient, msg.sender, _medicineName, _dosage, _quantity, block.timestamp);
+        
+        return prescriptionId;
+    }
+    
+    function getPrescription(string memory _prescriptionId) public view returns (
+        string memory,
+        address,
+        address,
+        string memory,
+        string memory,
+        uint256,
+        uint256
+    ) {
+        require(prescriptions[_prescriptionId].exists, "Prescription does not exist");
+        Prescription memory prescription = prescriptions[_prescriptionId];
+        return (
+            prescription.prescriptionId,
+            prescription.patient,
+            prescription.doctor,
+            prescription.medicineName,
+            prescription.dosage,
+            prescription.quantity,
+            prescription.timestamp
+        );
+    }
+    
+    function getTotalPrescriptions() public view returns (uint256) {
+        return prescriptionCounter;
+    }
+    
+    function _toHexString(uint256 value) internal pure returns (string memory) {
+        if (value == 0) {
+            return "0";
+        }
+        uint256 temp = value;
+        uint256 digits;
+        while (temp != 0) {
+            digits++;
+            temp /= 16;
+        }
+        bytes memory buffer = new bytes(digits);
+        for (uint256 i = digits; i > 0; i--) {
+            buffer[i - 1] = _toHexChar(uint8(value & 0xf));
+            value >>= 4;
+        }
+        return string(buffer);
+    }
+    
+    function _toHexChar(uint8 value) internal pure returns (bytes1) {
+        if (value < 10) {
+            return bytes1(uint8(bytes1('0')) + value);
+        } else {
+            return bytes1(uint8(bytes1('a')) + value - 10);
+        }
     }
     
     event BatchMinted(
@@ -276,9 +418,20 @@ contract Oath {
     
     event DrugDispensed(
         string indexed batchId,
+        string prescriptionId,
         address indexed patient,
         address indexed doctor,
         address pharmacy,
+        uint256 quantity,
+        uint256 timestamp
+    );
+    
+    event PrescriptionCreated(
+        address indexed patient,
+        address indexed doctor,
+        string prescriptionId,
+        string medicineName,
+        string dosage,
         uint256 quantity,
         uint256 timestamp
     );
