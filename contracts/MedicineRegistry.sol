@@ -46,8 +46,4 @@ contract MedicineRegistry {
     function verifyMedicine(string memory _batchNo) public view returns (bool) {
         return medicines[_batchNo].isAuthentic;
     }
-
-    function markMedicineAsFake(string memory _batchNo) public onlyManufacturer {
-        medicines[_batchNo].isAuthentic = false;
-    }
 }
