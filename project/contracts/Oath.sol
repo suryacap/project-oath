@@ -5,9 +5,11 @@ contract Oath {
     mapping(address => bool) public manufacturers;
     mapping(address => bool) public pharmacies;
     mapping(string => Batch) public batches;
+    mapping(string => DispensingRecord[]) public dispensingHistory;
     
     address public admin;
     uint256 public batchCounter;
+    uint256 public dispensingCounter;
     
     struct Batch {
         string batchId;
@@ -17,6 +19,16 @@ contract Oath {
         uint256 expiryDate;
         uint256 price;
         address manufacturer;
+        bool exists;
+    }
+    
+    struct DispensingRecord {
+        string batchId;
+        address patient;
+        address doctor;
+        address pharmacy;
+        uint256 timestamp;
+        uint256 quantity;
         bool exists;
     }
     
@@ -166,6 +178,85 @@ contract Oath {
         );
     }
     
+    function dispenseDrug(
+        string memory _batchId,
+        address _patient,
+        address _doctor,
+        uint256 _quantity
+    ) public onlyPharmacy returns (bool) {
+        require(bytes(_batchId).length > 0, "Batch ID cannot be empty");
+        require(_patient != address(0), "Invalid patient address");
+        require(_doctor != address(0), "Invalid doctor address");
+        require(_quantity > 0, "Quantity must be greater than 0");
+        require(batches[_batchId].exists, "Batch does not exist");
+        
+        Batch storage batch = batches[_batchId];
+        
+        // Check if batch has expired
+        require(block.timestamp <= batch.expiryDate, "Batch has expired");
+        
+        // Check if manufacturer is still active
+        require(manufacturers[batch.manufacturer], "Manufacturer is not active");
+        
+        // Check if sufficient quantity is available
+        require(batch.quantity >= _quantity, "Insufficient quantity available");
+        
+        // Reduce the available quantity
+        batch.quantity -= _quantity;
+        
+        // Create dispensing record
+        DispensingRecord memory record = DispensingRecord({
+            batchId: _batchId,
+            patient: _patient,
+            doctor: _doctor,
+            pharmacy: msg.sender,
+            timestamp: block.timestamp,
+            quantity: _quantity,
+            exists: true
+        });
+        
+        // Store the dispensing record
+        dispensingHistory[_batchId].push(record);
+        dispensingCounter++;
+        
+        emit DrugDispensed(_batchId, _patient, _doctor, msg.sender, _quantity, block.timestamp);
+        
+        return true;
+    }
+    
+    function getDispensingHistory(string memory _batchId) public view returns (
+        address[] memory,
+        address[] memory,
+        address[] memory,
+        uint256[] memory,
+        uint256[] memory
+    ) {
+        require(batches[_batchId].exists, "Batch does not exist");
+        
+        DispensingRecord[] memory records = dispensingHistory[_batchId];
+        uint256 length = records.length;
+        
+        address[] memory _patients = new address[](length);
+        address[] memory _doctors = new address[](length);
+        address[] memory _pharmacies = new address[](length);
+        uint256[] memory quantities = new uint256[](length);
+        uint256[] memory timestamps = new uint256[](length);
+        
+        for (uint256 i = 0; i < length; i++) {
+            _patients[i] = records[i].patient;
+            _doctors[i] = records[i].doctor;
+            _pharmacies[i] = records[i].pharmacy;
+            quantities[i] = records[i].quantity;
+            timestamps[i] = records[i].timestamp;
+        }
+        
+        return (_patients, _doctors, _pharmacies, quantities, timestamps);
+    }
+    
+    function getTotalDispensings() public view returns (uint256) {
+        return dispensingCounter;
+    }
+    
     event BatchMinted(
         string indexed batchId,
         string medicineName,
@@ -181,5 +272,14 @@ contract Oath {
         bool verified,
         address pharmacy,
         string reason
+    );
+    
+    event DrugDispensed(
+        string indexed batchId,
+        address indexed patient,
+        address indexed doctor,
+        address pharmacy,
+        uint256 quantity,
+        uint256 timestamp
     );
 }
