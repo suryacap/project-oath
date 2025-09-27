@@ -33,7 +33,12 @@ import {
   AlertTriangle,
   Package,
   Link,
-  Zap
+  Zap,
+  Fingerprint,
+  Eye,
+  Database,
+  Lock,
+  BarChart3
 } from 'lucide-react';
 
 // Theme Configuration
@@ -72,7 +77,13 @@ const WALLET_ROLES = {
   '0x3c6f9e2b5a8d1c4f7e0b3a6d9c2f5e8b1a4d7c0': 'Patient',
   '0x0987654321fedcba0987654321fedcba09876543': 'Patient',
   '0x4d5e6f7890abcdef1234567890abcdef12345678': 'Patient',
-  '0x6543210fedcba9876543210fedcba9876543210fe': 'Patient'
+  '0x6543210fedcba9876543210fedcba9876543210fe': 'Patient',
+  
+  // Insurer wallets
+  '0x1a2b3c4d5e6f7890abcdef1234567890abcdef1234': 'Insurer',
+  '0x9f8e7d6c5b4a3928f7e6d5c4b3a2918f7e6d5c4': 'Insurer',
+  '0x5a4b3c2d1e0f9e8d7c6b5a4938271605f4e3d2c': 'Insurer',
+  '0x8e7d6c5b4a3928f7e6d5c4b3a2918f7e6d5c4b3': 'Insurer'
 };
 
 // Profile Data for each role
@@ -148,6 +159,30 @@ const PROFILE_DATA = {
     insurance: {
       provider: "Blue Cross Blue Shield",
       policyNumber: "BCBS-123456789"
+    },
+    biometricData: {
+      fingerprintHash: "0x1a2b3c4d5e6f7890abcdef1234567890abcdef1234",
+      isRegistered: true,
+      registeredDate: "2024-01-15"
+    }
+  },
+  Insurer: {
+    companyName: "HealthGuard Insurance",
+    type: "Health Insurance Provider",
+    founded: "2005",
+    license: "INS-2024-001",
+    certifications: ["State Insurance License", "HIPAA Compliant", "SOC 2 Type II", "ISO 27001"],
+    specializations: ["Health Insurance", "Claims Processing", "Risk Assessment", "Patient Data Analytics"],
+    contact: {
+      email: "info@healthguard.com",
+      phone: "+1-555-0123",
+      address: "789 Insurance Blvd, New York, NY 10001",
+      website: "www.healthguard.com"
+    },
+    kyc: {
+      status: "verified",
+      verifiedDate: "2024-01-10",
+      documents: ["Insurance License", "State Registration", "Financial Statements", "Compliance Certificate"]
     }
   }
 };
@@ -186,6 +221,45 @@ const DUMMY_DATA = {
       expiry: 'Invalid'
     }
   ],
+  biometricPatients: [
+    {
+      id: 'PAT-001',
+      name: 'John Smith',
+      fingerprintHash: '0x1a2b3c4d5e6f7890abcdef1234567890abcdef1234',
+      walletAddress: '0x3c6f9e2b5a8d1c4f7e0b3a6d9c2f5e8b1a4d7c0',
+      medicalHistory: [
+        { type: 'Prescription Issued', medication: 'Paracetamol 500mg', doctor: 'Dr. A. Smith', date: '2024-10-15', hash: '0xdef345abc789', details: 'Prescribed for headache relief' },
+        { type: 'Drug Dispensed', medication: 'Paracetamol 500mg', batch: 'BATCH-4537', pharmacy: 'City Drugstore', date: '2024-10-16', hash: '0xabc123def456', details: 'Successfully dispensed to patient' },
+        { type: 'Check-in', notes: 'No adverse effects reported. Patient recovering well.', doctor: 'Dr. A. Smith', date: '2024-10-25', hash: '0x223344556677', details: 'Follow-up consultation completed' }
+      ],
+      personalInfo: {
+        age: 45,
+        bloodType: 'O+',
+        allergies: ['Penicillin', 'Shellfish'],
+        emergencyContact: { name: 'Jane Smith', relationship: 'Spouse', phone: '+1-555-9999' },
+        medicalHistory: ['Hypertension', 'Type 2 Diabetes'],
+        insurance: { provider: 'Blue Cross Blue Shield', policyNumber: 'BCBS-123456789' }
+      }
+    },
+    {
+      id: 'PAT-002',
+      name: 'Sarah Johnson',
+      fingerprintHash: '0x2b3c4d5e6f7890abcdef1234567890abcdef12345',
+      walletAddress: '0x0987654321fedcba0987654321fedcba09876543',
+      medicalHistory: [
+        { type: 'Prescription Issued', medication: 'Amoxicillin 250mg', doctor: 'Dr. B. Wilson', date: '2024-10-20', hash: '0xdef345abc790', details: 'Prescribed for bacterial infection' },
+        { type: 'Drug Dispensed', medication: 'Amoxicillin 250mg', batch: 'BATCH-8890', pharmacy: 'HealthPlus Pharmacy', date: '2024-10-21', hash: '0xabc123def457', details: 'Successfully dispensed to patient' }
+      ],
+      personalInfo: {
+        age: 32,
+        bloodType: 'A+',
+        allergies: ['Latex'],
+        emergencyContact: { name: 'Mike Johnson', relationship: 'Brother', phone: '+1-555-8888' },
+        medicalHistory: ['Asthma'],
+        insurance: { provider: 'Aetna', policyNumber: 'AET-987654321' }
+      }
+    }
+  ],
   patientHistory: [
     { 
       type: 'Prescription Issued', 
@@ -213,6 +287,147 @@ const DUMMY_DATA = {
       details: 'Follow-up consultation completed'
     },
   ],
+};
+
+// Biometric Authentication Component
+const BiometricAuth = ({ onSuccess, onClose, mode = 'login' }: { onSuccess: (patientData: any) => void; onClose: () => void; mode?: 'login' | 'register' }) => {
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<any>(null);
+  const [error, setError] = useState('');
+
+  const handleFingerprintScan = async () => {
+    setIsScanning(true);
+    setError('');
+    setScanResult(null);
+
+    // Simulate fingerprint scanning
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Simulate scan result
+    const mockFingerprintHash = '0x1a2b3c4d5e6f7890abcdef1234567890abcdef1234';
+    const patient = DUMMY_DATA.biometricPatients.find(p => p.fingerprintHash === mockFingerprintHash);
+
+    if (patient) {
+      setScanResult(patient);
+      setTimeout(() => {
+        onSuccess(patient);
+      }, 1000);
+    } else {
+      setError('Fingerprint not recognized. Please try again or register first.');
+    }
+
+    setIsScanning(false);
+  };
+
+  const handleRegisterFingerprint = async () => {
+    setIsScanning(true);
+    setError('');
+
+    // Simulate fingerprint registration
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
+    const newFingerprintHash = `0x${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}${Math.random().toString(16).slice(2, 10)}`;
+    
+    setScanResult({
+      id: `PAT-${Date.now()}`,
+      name: 'New Patient',
+      fingerprintHash: newFingerprintHash,
+      message: 'Fingerprint registered successfully!'
+    });
+
+    setTimeout(() => {
+      onSuccess({ fingerprintHash: newFingerprintHash, isNew: true });
+    }, 1000);
+
+    setIsScanning(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+        <div className="p-8">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center">
+              <Fingerprint className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
+              <h2 className="text-2xl font-bold" style={{ color: THEME.PRIMARY }}>
+                {mode === 'register' ? 'Register Fingerprint' : 'Biometric Authentication'}
+              </h2>
+            </div>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <XCircle className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="text-center">
+            <div className="w-32 h-32 mx-auto mb-6 rounded-full flex items-center justify-center border-4 border-dashed border-gray-300">
+              <Fingerprint className="w-16 h-16 text-gray-400" />
+            </div>
+
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">
+              {mode === 'register' ? 'Place your finger on the scanner' : 'Scan your fingerprint'}
+            </h3>
+            <p className="text-gray-600 mb-6">
+              {mode === 'register' 
+                ? 'This will register your fingerprint for future authentication'
+                : 'This will authenticate your identity and access your medical records'
+              }
+            </p>
+
+            {error && (
+              <div className="p-4 bg-red-50 rounded-xl border border-red-200 mb-4">
+                <p className="text-red-700 text-sm">{error}</p>
+              </div>
+            )}
+
+            {scanResult && !scanResult.message && (
+              <div className="p-4 bg-green-50 rounded-xl border border-green-200 mb-4">
+                <div className="flex items-center">
+                  <CheckCircle className="w-5 h-5 mr-2 text-green-600" />
+                  <p className="text-green-700 text-sm">Patient found: {scanResult.name}</p>
+                </div>
+              </div>
+            )}
+
+            {scanResult && scanResult.message && (
+              <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 mb-4">
+                <div className="flex items-center">
+                  <CheckCircle className="w-5 h-5 mr-2 text-blue-600" />
+                  <p className="text-blue-700 text-sm">{scanResult.message}</p>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={mode === 'register' ? handleRegisterFingerprint : handleFingerprintScan}
+              disabled={isScanning}
+              className="w-full py-4 font-bold text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              style={{ backgroundColor: THEME.PRIMARY }}
+            >
+              {isScanning ? (
+                <>
+                  <div className="animate-spin w-5 h-5 mr-3 border-2 border-white border-t-transparent rounded-full"></div>
+                  {mode === 'register' ? 'Registering...' : 'Scanning...'}
+                </>
+              ) : (
+                <>
+                  <Fingerprint className="w-5 h-5 mr-3" />
+                  {mode === 'register' ? 'Register Fingerprint' : 'Scan Fingerprint'}
+                </>
+              )}
+            </button>
+
+            <div className="mt-6 text-xs text-gray-500">
+              <p><strong>Security:</strong> Your fingerprint data is encrypted and stored securely on the blockchain.</p>
+              <p><strong>Privacy:</strong> Only authorized medical personnel can access your records.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // KYC Verification Component
@@ -568,94 +783,127 @@ const WalletConnectionScreen = ({ onWalletConnect, onPublicSearch }: { onWalletC
             <div className="mb-8">
               <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">Select Your Role & Connect</h3>
               <p className="text-center text-gray-600 mb-6">Choose your role and connect your MetaMask wallet to access your portal</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-                <button
-                  onClick={() => handleConnectWithRole('Manufacturer')}
-                  disabled={isConnectingWithRole}
-                  className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ 
-                    borderColor: THEME.PRIMARY, 
-                    backgroundColor: selectedRole === 'Manufacturer' ? THEME.PRIMARY + '20' : THEME.PRIMARY + '10'
-                  }}
-                >
-                  <Factory className="w-8 h-8 mx-auto mb-2" style={{ color: THEME.PRIMARY }} />
-                  <h4 className="font-bold text-gray-800 mb-1">Manufacturer</h4>
-                  <p className="text-sm text-gray-600 mb-3">Mint drug batches</p>
-                  {isConnectingWithRole && selectedRole === 'Manufacturer' ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
-                      <span className="text-xs text-gray-600">Connecting...</span>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-500">Click to connect</div>
-                  )}
-                </button>
-                
-                <button
-                  onClick={() => handleConnectWithRole('Pharmacy')}
-                  disabled={isConnectingWithRole}
-                  className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ 
-                    borderColor: THEME.SECONDARY, 
-                    backgroundColor: selectedRole === 'Pharmacy' ? THEME.SECONDARY + '20' : THEME.SECONDARY + '10'
-                  }}
-                >
-                  <Building2 className="w-8 h-8 mx-auto mb-2" style={{ color: THEME.SECONDARY }} />
-                  <h4 className="font-bold text-gray-800 mb-1">Pharmacy</h4>
-                  <p className="text-sm text-gray-600 mb-3">Verify & dispense</p>
-                  {isConnectingWithRole && selectedRole === 'Pharmacy' ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
-                      <span className="text-xs text-gray-600">Connecting...</span>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-500">Click to connect</div>
-                  )}
-                </button>
-                
-                <button
-                  onClick={() => handleConnectWithRole('Doctor')}
-                  disabled={isConnectingWithRole}
-                  className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ 
-                    borderColor: THEME.SUCCESS, 
-                    backgroundColor: selectedRole === 'Doctor' ? THEME.SUCCESS + '20' : THEME.SUCCESS + '10'
-                  }}
-                >
-                  <User className="w-8 h-8 mx-auto mb-2" style={{ color: THEME.SUCCESS }} />
-                  <h4 className="font-bold text-gray-800 mb-1">Doctor</h4>
-                  <p className="text-sm text-gray-600 mb-3">Issue prescriptions</p>
-                  {isConnectingWithRole && selectedRole === 'Doctor' ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
-                      <span className="text-xs text-gray-600">Connecting...</span>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-500">Click to connect</div>
-                  )}
-                </button>
-                
-                <button
-                  onClick={() => handleConnectWithRole('Patient')}
-                  disabled={isConnectingWithRole}
-                  className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                  style={{ 
-                    borderColor: THEME.WARNING, 
-                    backgroundColor: selectedRole === 'Patient' ? THEME.WARNING + '20' : THEME.WARNING + '10'
-                  }}
-                >
-                  <Activity className="w-8 h-8 mx-auto mb-2" style={{ color: THEME.WARNING }} />
-                  <h4 className="font-bold text-gray-800 mb-1">Patient</h4>
-                  <p className="text-sm text-gray-600 mb-3">View medical history</p>
-                  {isConnectingWithRole && selectedRole === 'Patient' ? (
-                    <div className="flex items-center justify-center">
-                      <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
-                      <span className="text-xs text-gray-600">Connecting...</span>
-                    </div>
-                  ) : (
-                    <div className="text-xs text-gray-500">Click to connect</div>
-                  )}
-                </button>
+              
+              {/* Primary Roles - Healthcare Providers */}
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-gray-700 mb-4 text-center">Healthcare Providers</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                  <button
+                    onClick={() => handleConnectWithRole('Manufacturer')}
+                    disabled={isConnectingWithRole}
+                    className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ 
+                      borderColor: THEME.PRIMARY, 
+                      backgroundColor: selectedRole === 'Manufacturer' ? THEME.PRIMARY + '20' : THEME.PRIMARY + '10'
+                    }}
+                  >
+                    <Factory className="w-10 h-10 mx-auto mb-3" style={{ color: THEME.PRIMARY }} />
+                    <h4 className="font-bold text-gray-800 mb-2 text-lg">Drug Manufacturer</h4>
+                    <p className="text-sm text-gray-600 mb-3">Create & mint pharmaceutical batches</p>
+                    {isConnectingWithRole && selectedRole === 'Manufacturer' ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                        <span className="text-xs text-gray-600">Connecting...</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">Click to connect</div>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => handleConnectWithRole('Pharmacy')}
+                    disabled={isConnectingWithRole}
+                    className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ 
+                      borderColor: THEME.SECONDARY, 
+                      backgroundColor: selectedRole === 'Pharmacy' ? THEME.SECONDARY + '20' : THEME.SECONDARY + '10'
+                    }}
+                  >
+                    <Building2 className="w-10 h-10 mx-auto mb-3" style={{ color: THEME.SECONDARY }} />
+                    <h4 className="font-bold text-gray-800 mb-2 text-lg">Pharmacy</h4>
+                    <p className="text-sm text-gray-600 mb-3">Verify & dispense medications</p>
+                    {isConnectingWithRole && selectedRole === 'Pharmacy' ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                        <span className="text-xs text-gray-600">Connecting...</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">Click to connect</div>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => handleConnectWithRole('Doctor')}
+                    disabled={isConnectingWithRole}
+                    className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ 
+                      borderColor: THEME.SUCCESS, 
+                      backgroundColor: selectedRole === 'Doctor' ? THEME.SUCCESS + '20' : THEME.SUCCESS + '10'
+                    }}
+                  >
+                    <User className="w-10 h-10 mx-auto mb-3" style={{ color: THEME.SUCCESS }} />
+                    <h4 className="font-bold text-gray-800 mb-2 text-lg">Medical Doctor</h4>
+                    <p className="text-sm text-gray-600 mb-3">Issue prescriptions & access records</p>
+                    {isConnectingWithRole && selectedRole === 'Doctor' ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                        <span className="text-xs text-gray-600">Connecting...</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">Click to connect</div>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Secondary Roles - Patients & Insurers */}
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-gray-700 mb-4 text-center">Patients & Insurers</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                  <button
+                    onClick={() => handleConnectWithRole('Patient')}
+                    disabled={isConnectingWithRole}
+                    className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ 
+                      borderColor: THEME.WARNING, 
+                      backgroundColor: selectedRole === 'Patient' ? THEME.WARNING + '20' : THEME.WARNING + '10'
+                    }}
+                  >
+                    <Activity className="w-10 h-10 mx-auto mb-3" style={{ color: THEME.WARNING }} />
+                    <h4 className="font-bold text-gray-800 mb-2 text-lg">Patient</h4>
+                    <p className="text-sm text-gray-600 mb-3">Access medical history & records</p>
+                    {isConnectingWithRole && selectedRole === 'Patient' ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                        <span className="text-xs text-gray-600">Connecting...</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">Click to connect</div>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => handleConnectWithRole('Insurer')}
+                    disabled={isConnectingWithRole}
+                    className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ 
+                      borderColor: '#8B5CF6', 
+                      backgroundColor: selectedRole === 'Insurer' ? '#8B5CF6' + '20' : '#8B5CF6' + '10'
+                    }}
+                  >
+                    <BarChart3 className="w-10 h-10 mx-auto mb-3" style={{ color: '#8B5CF6' }} />
+                    <h4 className="font-bold text-gray-800 mb-2 text-lg">Insurance Provider</h4>
+                    <p className="text-sm text-gray-600 mb-3">Access patient data & analytics</p>
+                    {isConnectingWithRole && selectedRole === 'Insurer' ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                        <span className="text-xs text-gray-600">Connecting...</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">Click to connect</div>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -2353,6 +2601,13 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
     };
   }, []);
 
+  const handleBiometricSuccess = (patientData: any) => {
+    if (patientData.isNew) {
+      setIsBiometricRegistered(true);
+    }
+    setShowBiometricAuth(false);
+  };
+
   const TimelineItem = ({ item, isLast }: { item: any; isLast: boolean }) => {
     const getTypeColor = (type: string) => {
       if (type.includes('Prescription')) return THEME.PRIMARY;
@@ -2578,7 +2833,69 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
       <Header title="Patient Portal" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
       
       <div className="max-w-7xl mx-auto p-4 sm:p-8">
-        <div className="grid lg:grid-cols-4 gap-8">
+        <div className="grid lg:grid-cols-5 gap-8">
+          {/* Biometric Authentication Panel */}
+          <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-xl">
+            <div className="flex items-center mb-6">
+              <Fingerprint className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
+              <div>
+                <h2 className="text-xl font-bold" style={{ color: THEME.PRIMARY }}>Biometric Auth</h2>
+                <p className="text-sm text-gray-600">Secure access</p>
+              </div>
+            </div>
+
+            {!isBiometricRegistered ? (
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                  <Fingerprint className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="font-semibold text-gray-800 mb-2">Register Fingerprint</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Register your fingerprint for secure access to your medical records
+                </p>
+                <button
+                  onClick={() => setShowBiometricAuth(true)}
+                  className="w-full py-2 px-4 font-medium text-white rounded-lg transition-all duration-200 hover:scale-105 shadow-md hover:shadow-lg"
+                  style={{ backgroundColor: THEME.PRIMARY }}
+                >
+                  <Fingerprint className="w-4 h-4 mr-2 inline" />
+                  Register Now
+                </button>
+              </div>
+            ) : (
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
+                  <CheckCircle className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="font-semibold text-gray-800 mb-2">Fingerprint Registered</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Your biometric authentication is active
+                </p>
+                <div className="text-xs text-green-600 bg-green-50 px-3 py-2 rounded-lg">
+                  ✓ Biometric security enabled
+                </div>
+              </div>
+            )}
+
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="font-semibold text-gray-800 mb-3">Security Features</h3>
+              <div className="space-y-2 text-sm text-gray-600">
+                <div className="flex items-center">
+                  <Lock className="w-4 h-4 mr-2 text-green-600" />
+                  <span>Encrypted storage</span>
+                </div>
+                <div className="flex items-center">
+                  <Shield className="w-4 h-4 mr-2 text-blue-600" />
+                  <span>Blockchain verified</span>
+                </div>
+                <div className="flex items-center">
+                  <Eye className="w-4 h-4 mr-2 text-purple-600" />
+                  <span>Privacy protected</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Digital Proofs Panel */}
           <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-xl">
             <div className="flex items-center mb-6">
@@ -2731,8 +3048,8 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
 
       {showProfile && (
         <Profile
-          role="Patient"
-          profileData={PROFILE_DATA.Patient}
+          role="Insurer"
+          profileData={PROFILE_DATA.Insurer}
           onClose={() => setShowProfile(false)}
         />
       )}
@@ -3034,6 +3351,8 @@ const App = () => {
         return (props: any) => <DoctorPortal {...props} walletAddress={connectedWallet} onDisconnect={handleDisconnect} />;
       case 'Patient':
         return (props: any) => <PatientPortal {...props} walletAddress={connectedWallet} onDisconnect={handleDisconnect} />;
+      case 'Insurer':
+        return (props: any) => <InsurerPortal {...props} walletAddress={connectedWallet} onDisconnect={handleDisconnect} />;
       default:
         return () => <WalletConnectionScreen onWalletConnect={handleWalletConnect} onPublicSearch={() => setShowPublicSearch(true)} />;
     }
