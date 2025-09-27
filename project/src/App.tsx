@@ -213,7 +213,7 @@ const DUMMY_DATA = {
 };
 
 // KYC Verification Component
-const KYCVerification = ({ role, profileData, onClose }: { role: string; profileData: any; onClose: () => void }) => {
+const KYCVerification = ({ profileData, onClose }: { profileData: any; onClose: () => void }) => {
   const [documents, setDocuments] = useState<{[key: string]: File | null}>({});
   const [isUploading, setIsUploading] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState(profileData.kyc.status);
@@ -379,20 +379,26 @@ const useWallet = () => {
     try {
       // Check if MetaMask is installed
       if (typeof window.ethereum === 'undefined') {
-        // Fallback to demo mode
-        console.log('MetaMask not found, using demo mode...');
-        const demoAddresses = Object.keys(WALLET_ROLES);
-        const randomAddress = demoAddresses[Math.floor(Math.random() * demoAddresses.length)];
-        
-        await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate connection delay
-        
-        setWalletAddress(randomAddress);
-        setIsConnected(true);
-        console.log('Demo wallet connected:', randomAddress);
-        return randomAddress;
+        setError('MetaMask is not installed. Please install MetaMask extension to continue.');
+        setIsConnecting(false);
+        return;
       }
       
-      // Always request account access to trigger MetaMask popup
+      // Check if MetaMask is locked
+      try {
+        const accounts = await window.ethereum.request({
+          method: 'eth_accounts',
+        });
+        
+        if (accounts.length === 0) {
+          // MetaMask is installed but no accounts are connected
+          console.log('No accounts connected, requesting access...');
+        }
+      } catch (err) {
+        console.log('MetaMask is locked, requesting unlock...');
+      }
+      
+      // Request account access to trigger MetaMask popup
       console.log('Requesting MetaMask connection...');
       const accounts = await window.ethereum.request({
         method: 'eth_requestAccounts',
@@ -413,6 +419,8 @@ const useWallet = () => {
         setError('Connection rejected by user. Please try again.');
       } else if (err.code === -32002) {
         setError('Connection request already pending. Please check your MetaMask extension.');
+      } else if (err.message?.includes('User rejected')) {
+        setError('Connection rejected by user. Please try again.');
       } else {
         setError('Failed to connect to MetaMask. Please make sure MetaMask is installed and unlocked.');
       }
@@ -456,8 +464,10 @@ const useWallet = () => {
 };
 
 // Role Selection Screen Component
-const WalletConnectionScreen = ({ onWalletConnect }: { onWalletConnect: (address: string, role: string) => void }) => {
-  const { isConnected, walletAddress, isConnecting, error, connectWallet, getUserRole, setError } = useWallet();
+const WalletConnectionScreen = ({ onWalletConnect, onPublicSearch }: { onWalletConnect: (address: string, role: string) => void; onPublicSearch: () => void }) => {
+  const { isConnected, walletAddress, isConnecting, error, connectWallet, getUserRole } = useWallet();
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
+  const [isConnectingWithRole, setIsConnectingWithRole] = useState(false);
   
   const handleConnect = async () => {
     const address = await connectWallet();
@@ -466,6 +476,24 @@ const WalletConnectionScreen = ({ onWalletConnect }: { onWalletConnect: (address
       if (role) {
         onWalletConnect(address, role);
       }
+    }
+  };
+
+  const handleConnectWithRole = async (role: string) => {
+    setSelectedRole(role);
+    setIsConnectingWithRole(true);
+    
+    try {
+      const address = await connectWallet();
+      if (address) {
+        // Use the selected role instead of auto-detected role
+        onWalletConnect(address, role);
+      }
+    } catch (err) {
+      console.error('Connection failed:', err);
+    } finally {
+      setIsConnectingWithRole(false);
+      setSelectedRole(null);
     }
   };
 
@@ -521,7 +549,7 @@ const WalletConnectionScreen = ({ onWalletConnect }: { onWalletConnect: (address
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50 flex items-center justify-center p-4">
-      <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-2xl w-full">
+      <div className="bg-white p-8 rounded-3xl shadow-2xl max-w-4xl w-full">
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
             <Shield className="w-12 h-12 mr-3" style={{ color: THEME.PRIMARY }} />
@@ -532,47 +560,160 @@ const WalletConnectionScreen = ({ onWalletConnect }: { onWalletConnect: (address
         </div>
 
         {!isConnected ? (
-          <div className="text-center mb-8">
-            <div className="mb-6">
-              <div className="w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center" 
-                   style={{ backgroundColor: THEME.PRIMARY + '20' }}>
-                <Wallet className="w-12 h-12" style={{ color: THEME.PRIMARY }} />
+          <div>
+            {/* Available Roles Section */}
+            <div className="mb-8">
+              <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">Select Your Role & Connect</h3>
+              <p className="text-center text-gray-600 mb-6">Choose your role and connect your MetaMask wallet to access your portal</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <button
+                  onClick={() => handleConnectWithRole('Manufacturer')}
+                  disabled={isConnectingWithRole}
+                  className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ 
+                    borderColor: THEME.PRIMARY, 
+                    backgroundColor: selectedRole === 'Manufacturer' ? THEME.PRIMARY + '20' : THEME.PRIMARY + '10'
+                  }}
+                >
+                  <Factory className="w-8 h-8 mx-auto mb-2" style={{ color: THEME.PRIMARY }} />
+                  <h4 className="font-bold text-gray-800 mb-1">Manufacturer</h4>
+                  <p className="text-sm text-gray-600 mb-3">Mint drug batches</p>
+                  {isConnectingWithRole && selectedRole === 'Manufacturer' ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                      <span className="text-xs text-gray-600">Connecting...</span>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-500">Click to connect</div>
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => handleConnectWithRole('Pharmacy')}
+                  disabled={isConnectingWithRole}
+                  className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ 
+                    borderColor: THEME.SECONDARY, 
+                    backgroundColor: selectedRole === 'Pharmacy' ? THEME.SECONDARY + '20' : THEME.SECONDARY + '10'
+                  }}
+                >
+                  <Building2 className="w-8 h-8 mx-auto mb-2" style={{ color: THEME.SECONDARY }} />
+                  <h4 className="font-bold text-gray-800 mb-1">Pharmacy</h4>
+                  <p className="text-sm text-gray-600 mb-3">Verify & dispense</p>
+                  {isConnectingWithRole && selectedRole === 'Pharmacy' ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                      <span className="text-xs text-gray-600">Connecting...</span>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-500">Click to connect</div>
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => handleConnectWithRole('Doctor')}
+                  disabled={isConnectingWithRole}
+                  className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ 
+                    borderColor: THEME.SUCCESS, 
+                    backgroundColor: selectedRole === 'Doctor' ? THEME.SUCCESS + '20' : THEME.SUCCESS + '10'
+                  }}
+                >
+                  <User className="w-8 h-8 mx-auto mb-2" style={{ color: THEME.SUCCESS }} />
+                  <h4 className="font-bold text-gray-800 mb-1">Doctor</h4>
+                  <p className="text-sm text-gray-600 mb-3">Issue prescriptions</p>
+                  {isConnectingWithRole && selectedRole === 'Doctor' ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                      <span className="text-xs text-gray-600">Connecting...</span>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-500">Click to connect</div>
+                  )}
+                </button>
+                
+                <button
+                  onClick={() => handleConnectWithRole('Patient')}
+                  disabled={isConnectingWithRole}
+                  className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ 
+                    borderColor: THEME.WARNING, 
+                    backgroundColor: selectedRole === 'Patient' ? THEME.WARNING + '20' : THEME.WARNING + '10'
+                  }}
+                >
+                  <Activity className="w-8 h-8 mx-auto mb-2" style={{ color: THEME.WARNING }} />
+                  <h4 className="font-bold text-gray-800 mb-1">Patient</h4>
+                  <p className="text-sm text-gray-600 mb-3">View medical history</p>
+                  {isConnectingWithRole && selectedRole === 'Patient' ? (
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                      <span className="text-xs text-gray-600">Connecting...</span>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-gray-500">Click to connect</div>
+                  )}
+                </button>
               </div>
-              <h3 className="text-2xl font-bold text-gray-800 mb-2">Connect Your Wallet</h3>
-              <p className="text-gray-600 mb-6">
-                Securely connect your MetaMask wallet to access your personalized dashboard
-              </p>
             </div>
-            
-            <button
-              onClick={handleConnect}
-              disabled={isConnecting}
-              className="w-full py-4 font-bold text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mb-4"
-              style={{ backgroundColor: THEME.PRIMARY }}
-            >
-              {isConnecting ? (
-                <>
-                  <div className="animate-spin w-5 h-5 mr-3 border-2 border-white border-t-transparent rounded-full"></div>
-                  Connecting...
-                </>
-              ) : (
-                <>
-                  <Link className="w-5 h-5 mr-3" />
-                  Connect with MetaMask
-                </>
-              )}
-            </button>
 
-            {error && (
-              <div className="p-4 bg-red-50 rounded-xl border border-red-200 mb-4">
-                <p className="text-red-700 text-sm">{error}</p>
+            {/* Alternative Connect Option */}
+            <div className="text-center mb-8">
+              <div className="mb-6">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center" 
+                     style={{ backgroundColor: THEME.PRIMARY + '20' }}>
+                  <Wallet className="w-8 h-8" style={{ color: THEME.PRIMARY }} />
+                </div>
+                <h3 className="text-lg font-bold text-gray-800 mb-2">Or Connect Without Selecting Role</h3>
+                <p className="text-gray-600 mb-4">
+                  Let the system auto-detect your role based on your wallet address
+                </p>
               </div>
-            )}
+              
+              <button
+                onClick={handleConnect}
+                disabled={isConnecting || isConnectingWithRole}
+                className="w-full py-3 px-6 font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-xl transition-all duration-200 hover:border-gray-400 hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center mb-4"
+              >
+                {isConnecting ? (
+                  <>
+                    <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                    Auto-detecting role...
+                  </>
+                ) : (
+                  <>
+                    <Link className="w-4 h-4 mr-2" />
+                    Connect & Auto-Detect Role
+                  </>
+                )}
+              </button>
 
-            <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-4">
-              <p className="mb-2"><strong>Auto-Routing:</strong> Your role will be automatically determined based on your wallet address.</p>
-              <p><strong>MetaMask Required:</strong> Please install MetaMask extension for full functionality.</p>
-              <p><strong>Demo Mode:</strong> If MetaMask is not installed, a demo wallet will be connected automatically.</p>
+              {error && (
+                <div className="p-4 bg-red-50 rounded-xl border border-red-200 mb-4">
+                  <p className="text-red-700 text-sm">{error}</p>
+                </div>
+              )}
+
+              <div className="text-xs text-gray-500 bg-gray-50 rounded-lg p-4">
+                <p className="mb-2"><strong>Recommended:</strong> Select your role above for the best experience.</p>
+                <p><strong>MetaMask Required:</strong> Please install MetaMask extension for full functionality.</p>
+              </div>
+            </div>
+
+            {/* Public Search Option */}
+            <div className="pt-6 border-t border-gray-200">
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-4">Don't have a wallet? No problem!</p>
+                <button
+                  onClick={onPublicSearch}
+                  className="w-full py-3 px-6 font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-xl transition-all duration-200 hover:border-gray-400 hover:shadow-md flex items-center justify-center"
+                >
+                  <Search className="w-5 h-5 mr-2" />
+                  Public Product Verification
+                </button>
+                <p className="text-xs text-gray-500 mt-2">
+                  Search and verify products without connecting a wallet
+                </p>
+              </div>
             </div>
           </div>
         ) : (
@@ -587,6 +728,7 @@ const WalletConnectionScreen = ({ onWalletConnect }: { onWalletConnect: (address
 };
 
 // Legacy Role Selection Screen (kept for manual role selection if needed)
+/*
 const RoleSelectionScreen = ({ setRole }: { setRole: (role: string) => void }) => {
   const roles = [
     { name: 'Manufacturer', icon: Factory, color: THEME.PRIMARY, description: 'Mint new drug batches' },
@@ -640,6 +782,7 @@ const RoleSelectionScreen = ({ setRole }: { setRole: (role: string) => void }) =
     </div>
   );
 };
+*/
 
 // Profile Component
 const Profile = ({ role, profileData, onClose }: { role: string; profileData: any; onClose: () => void }) => {
@@ -984,7 +1127,6 @@ const Profile = ({ role, profileData, onClose }: { role: string; profileData: an
 
       {showKYC && (
         <KYCVerification
-          role={role}
           profileData={profileData}
           onClose={() => setShowKYC(false)}
         />
@@ -994,7 +1136,7 @@ const Profile = ({ role, profileData, onClose }: { role: string; profileData: an
 };
 
 // Enhanced Header Component
-const Header = ({ title, role, setRole, walletAddress, onDisconnect }: { title: string; role: string; setRole: (role: string | null) => void; walletAddress?: string; onDisconnect?: () => void }) => (
+const Header = ({ title, setRole, walletAddress, onDisconnect }: { title: string; setRole: (role: string | null) => void; walletAddress?: string; onDisconnect?: () => void }) => (
   <header className="shadow-lg sticky top-0 z-50" style={{ backgroundColor: THEME.PRIMARY }}>
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
       <div className="flex justify-between items-center">
@@ -1128,7 +1270,7 @@ const ManufacturerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole:
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="Manufacturer Portal" role="Manufacturer" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
+      <Header title="Manufacturer Portal" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
       
       <div className="max-w-7xl mx-auto p-4 sm:p-8">
         <div className="grid lg:grid-cols-3 gap-8">
@@ -1155,8 +1297,7 @@ const ManufacturerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole:
                     onChange={(e) => handleInputChange('batchId', e.target.value)}
                     className="w-full p-4 border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
                     style={{ 
-                      borderColor: THEME.PRIMARY, 
-                      focusRingColor: THEME.PRIMARY + '50'
+                      borderColor: THEME.PRIMARY
                     }}
                     required
                   />
@@ -1355,7 +1496,6 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
     
     const isValid = verificationResult.status === 'Verified';
     const isCompromised = verificationResult.status === 'Compromised';
-    const notFound = verificationResult.status === 'Not Found';
     
     let bgColor, textColor, icon, title, message;
     
@@ -1403,7 +1543,7 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="Pharmacy Portal" role="Pharmacy" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
+      <Header title="Pharmacy Portal" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
       
       <div className="max-w-7xl mx-auto p-4 sm:p-8">
         <div className="grid lg:grid-cols-2 gap-8">
@@ -1430,8 +1570,7 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
                   }}
                   className="w-full p-4 text-lg border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
                   style={{ 
-                    borderColor: THEME.SECONDARY,
-                    focusRingColor: THEME.SECONDARY + '50'
+                    borderColor: THEME.SECONDARY
                   }}
                 />
               </div>
@@ -1565,7 +1704,7 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
     setPrescriptionData({ patientWallet: '', medicineName: '', dosage: '', duration: '' });
   };
 
-  const PatientHistoryCard = ({ item, index }: { item: any, index: number }) => {
+  const PatientHistoryCard = ({ item }: { item: any }) => {
     const getTypeColor = (type: string) => {
       if (type.includes('Prescription')) return THEME.PRIMARY;
       if (type.includes('Dispensed')) return THEME.SECONDARY;
@@ -1620,7 +1759,7 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="Doctor Portal" role="Doctor" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
+      <Header title="Doctor Portal" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
       
       <div className="max-w-7xl mx-auto p-4 sm:p-8">
         <div className="grid lg:grid-cols-2 gap-8">
@@ -1736,7 +1875,7 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
               
               <div className="space-y-4 max-h-96 overflow-y-auto">
                 {DUMMY_DATA.patientHistory.map((item, index) => (
-                  <PatientHistoryCard key={index} item={item} index={index} />
+                  <PatientHistoryCard key={index} item={item} />
                 ))}
               </div>
             </div>
@@ -1767,7 +1906,7 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
     };
   }, []);
 
-  const TimelineItem = ({ item, index, isLast }: { item: any; index: number; isLast: boolean }) => {
+  const TimelineItem = ({ item, isLast }: { item: any; isLast: boolean }) => {
     const getTypeColor = (type: string) => {
       if (type.includes('Prescription')) return THEME.PRIMARY;
       if (type.includes('Dispensed')) return THEME.SECONDARY;
@@ -1843,7 +1982,7 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header title="Patient Portal" role="Patient" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
+      <Header title="Patient Portal" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
       
       <div className="max-w-7xl mx-auto p-4 sm:p-8">
         <div className="grid lg:grid-cols-4 gap-8">
@@ -1916,7 +2055,6 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
                 <TimelineItem 
                   key={index} 
                   item={item} 
-                  index={index} 
                   isLast={index === DUMMY_DATA.patientHistory.length - 1}
                 />
               ))}
@@ -1951,10 +2089,231 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
   );
 };
 
+// Public Search Component
+const PublicSearch = () => {
+  const [batchId, setBatchId] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResult, setSearchResult] = useState<any>(null);
+
+  const handleSearch = async () => {
+    if (!batchId.trim()) return;
+    
+    setIsSearching(true);
+    setSearchResult(null);
+    
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    const batch = DUMMY_DATA.batches.find(b => b.id === batchId);
+    setSearchResult(batch || { status: 'Not Found' });
+    setIsSearching(false);
+  };
+
+  const SearchResult = () => {
+    if (!searchResult) return null;
+    
+    const isValid = searchResult.status === 'Verified';
+    const isCompromised = searchResult.status === 'Compromised';
+    
+    let bgColor, textColor, icon, title, message, manufacturer;
+    
+    if (isValid) {
+      bgColor = THEME.SUCCESS;
+      textColor = 'white';
+      icon = <CheckCircle className="w-16 h-16 mb-4" />;
+      title = 'GENUINE';
+      message = 'This product is verified and authentic';
+      manufacturer = searchResult.manufacturer;
+    } else if (isCompromised) {
+      bgColor = THEME.CRITICAL;
+      textColor = 'white';
+      icon = <XCircle className="w-16 h-16 mb-4" />;
+      title = 'NOT GENUINE';
+      message = 'WARNING: This product may be counterfeit';
+      manufacturer = 'Unknown/Unverified';
+    } else {
+      bgColor = THEME.WARNING;
+      textColor = 'white';
+      icon = <AlertTriangle className="w-16 h-16 mb-4" />;
+      title = 'NOT FOUND';
+      message = 'Batch ID not found in our database';
+      manufacturer = 'N/A';
+    }
+
+    return (
+      <div 
+        className="mt-8 p-8 rounded-2xl text-center shadow-2xl transform transition-all duration-500 scale-100 hover:scale-105"
+        style={{ backgroundColor: bgColor, color: textColor }}
+      >
+        <div className="flex flex-col items-center">
+          {icon}
+          <h3 className="text-4xl font-bold mb-2">{title}</h3>
+          <p className="text-xl mb-6">{message}</p>
+          
+          <div className="bg-black bg-opacity-20 rounded-lg p-6 w-full max-w-md">
+            <div className="grid grid-cols-1 gap-3 text-left">
+              <div className="flex justify-between">
+                <span className="font-semibold">Batch ID:</span>
+                <span className="font-mono">{searchResult.id || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-semibold">Product:</span>
+                <span>{searchResult.name || 'N/A'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-semibold">Manufacturer:</span>
+                <span>{manufacturer}</span>
+              </div>
+              {isValid && (
+                <>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">Quantity:</span>
+                    <span>{searchResult.quantity?.toLocaleString() || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">Manufacturing Date:</span>
+                    <span>{searchResult.date || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="font-semibold">Expiry Date:</span>
+                    <span>{searchResult.expiry || 'N/A'}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          
+          {isValid && (
+            <div className="mt-4 text-sm opacity-90">
+              <p>✓ Verified on OATH Blockchain</p>
+              <p>✓ Manufacturer: {searchResult.manufacturer}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 to-green-50">
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center mb-6">
+            <Shield className="w-16 h-16 mr-4" style={{ color: THEME.PRIMARY }} />
+            <h1 className="text-5xl font-bold" style={{ color: THEME.PRIMARY }}>OATH</h1>
+          </div>
+          <h2 className="text-3xl font-bold text-gray-800 mb-4">Public Product Verification</h2>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Verify the authenticity of pharmaceutical products by searching their batch number. 
+            Get instant verification from our secure blockchain database.
+          </p>
+        </div>
+
+        {/* Search Form */}
+        <div className="bg-white p-8 rounded-2xl shadow-2xl mb-8">
+          <div className="text-center mb-8">
+            <Search className="w-12 h-12 mx-auto mb-4" style={{ color: THEME.PRIMARY }} />
+            <h3 className="text-2xl font-bold text-gray-800 mb-2">Search Product Batch</h3>
+            <p className="text-gray-600">Enter the batch number to verify authenticity</p>
+          </div>
+
+          <div className="max-w-2xl mx-auto">
+            <div className="flex gap-4">
+              <input
+                type="text"
+                placeholder="Enter batch number (e.g., BATCH-4537)"
+                value={batchId}
+                onChange={(e) => {
+                  setBatchId(e.target.value);
+                  setSearchResult(null);
+                }}
+                className="flex-1 p-4 text-lg border-2 rounded-xl focus:ring-4 focus:ring-opacity-50 transition-all duration-200"
+                style={{ 
+                  borderColor: THEME.PRIMARY
+                }}
+                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              />
+              <button
+                onClick={handleSearch}
+                disabled={!batchId.trim() || isSearching}
+                className="px-8 py-4 font-bold text-white rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                style={{ backgroundColor: THEME.PRIMARY }}
+              >
+                {isSearching ? (
+                  <>
+                    <div className="animate-spin w-5 h-5 mr-3 border-2 border-white border-t-transparent rounded-full"></div>
+                    Searching...
+                  </>
+                ) : (
+                  <>
+                    <Search className="w-5 h-5 mr-3" />
+                    Verify
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          <SearchResult />
+        </div>
+
+        {/* Sample Batch Numbers */}
+        <div className="bg-white p-6 rounded-2xl shadow-xl">
+          <h3 className="text-xl font-bold text-gray-800 mb-4 text-center">Try These Sample Batch Numbers</h3>
+          <div className="grid md:grid-cols-3 gap-4">
+            <div className="text-center p-4 border-2 rounded-xl hover:shadow-md transition-all duration-200 cursor-pointer"
+                 style={{ borderColor: THEME.SUCCESS + '30' }}
+                 onClick={() => setBatchId('BATCH-4537')}>
+              <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-600" />
+              <p className="font-mono text-sm">BATCH-4537</p>
+              <p className="text-xs text-gray-600">Genuine Product</p>
+            </div>
+            <div className="text-center p-4 border-2 rounded-xl hover:shadow-md transition-all duration-200 cursor-pointer"
+                 style={{ borderColor: THEME.SUCCESS + '30' }}
+                 onClick={() => setBatchId('BATCH-8890')}>
+              <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-600" />
+              <p className="font-mono text-sm">BATCH-8890</p>
+              <p className="text-xs text-gray-600">Genuine Product</p>
+            </div>
+            <div className="text-center p-4 border-2 rounded-xl hover:shadow-md transition-all duration-200 cursor-pointer"
+                 style={{ borderColor: THEME.CRITICAL + '30' }}
+                 onClick={() => setBatchId('BATCH-1122')}>
+              <XCircle className="w-8 h-8 mx-auto mb-2 text-red-600" />
+              <p className="font-mono text-sm">BATCH-1122</p>
+              <p className="text-xs text-gray-600">Counterfeit Test</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Features */}
+        <div className="mt-12 grid md:grid-cols-3 gap-8">
+          <div className="text-center">
+            <Shield className="w-12 h-12 mx-auto mb-4" style={{ color: THEME.PRIMARY }} />
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Blockchain Verified</h3>
+            <p className="text-gray-600">All data is stored on a secure, immutable blockchain ledger</p>
+          </div>
+          <div className="text-center">
+            <Search className="w-12 h-12 mx-auto mb-4" style={{ color: THEME.SECONDARY }} />
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Instant Results</h3>
+            <p className="text-gray-600">Get immediate verification results in seconds</p>
+          </div>
+          <div className="text-center">
+            <Factory className="w-12 h-12 mx-auto mb-4" style={{ color: THEME.SUCCESS }} />
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Manufacturer Verified</h3>
+            <p className="text-gray-600">Direct verification from authorized manufacturers</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Main App Component
 const App = () => {
   const [currentRole, setCurrentRole] = useState<string | null>(null);
   const [connectedWallet, setConnectedWallet] = useState<string>('');
+  const [showPublicSearch, setShowPublicSearch] = useState(false);
   const { disconnectWallet } = useWallet();
 
   // Check for existing session on component mount
@@ -1986,6 +2345,35 @@ const App = () => {
   };
 
   const CurrentPortal = useMemo(() => {
+    if (showPublicSearch) {
+      return () => (
+        <div>
+          <div className="bg-white shadow-lg sticky top-0 z-50">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  <Shield className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-bold" style={{ color: THEME.PRIMARY }}>OATH</h1>
+                    <p className="text-sm" style={{ color: THEME.SECONDARY }}>Public Product Verification</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowPublicSearch(false)}
+                  className="flex items-center px-4 py-2 text-sm font-medium rounded-full transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
+                  style={{ backgroundColor: THEME.SECONDARY, color: THEME.TEXT }}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Back to Login
+                </button>
+              </div>
+            </div>
+          </div>
+          <PublicSearch />
+        </div>
+      );
+    }
+    
     switch (currentRole) {
       case 'Manufacturer':
         return (props: any) => <ManufacturerPortal {...props} walletAddress={connectedWallet} onDisconnect={handleDisconnect} />;
@@ -1996,9 +2384,9 @@ const App = () => {
       case 'Patient':
         return (props: any) => <PatientPortal {...props} walletAddress={connectedWallet} onDisconnect={handleDisconnect} />;
       default:
-        return () => <WalletConnectionScreen onWalletConnect={handleWalletConnect} />;
+        return () => <WalletConnectionScreen onWalletConnect={handleWalletConnect} onPublicSearch={() => setShowPublicSearch(true)} />;
     }
-  }, [currentRole, connectedWallet]);
+  }, [currentRole, connectedWallet, showPublicSearch]);
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans antialiased">
