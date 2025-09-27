@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 contract PrescriptionRegistry {
@@ -12,10 +13,24 @@ contract PrescriptionRegistry {
 
     mapping(string => Prescription) public prescriptions; // Mapping from prescriptionId to Prescription
     mapping(address => bool) public doctors; // Authorized doctors
+    address public admin;
 
     modifier onlyDoctor() {
         require(doctors[msg.sender], "Not an authorized doctor");
         _;
+    }
+
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Caller is not admin");
+        _;
+    }
+
+    constructor() {
+        admin = msg.sender;
+    }
+
+    function setAdmin(address _NewAdmin) public onlyAdmin {
+        admin = _NewAdmin;
     }
 
     function issuePrescription(
@@ -41,5 +56,13 @@ contract PrescriptionRegistry {
 
     function invalidatePrescription(string memory _prescriptionId) public onlyDoctor {
         prescriptions[_prescriptionId].isValid = false;
+    }
+
+    function addDoctor(address _doctorAddress) public onlyAdmin {
+        doctors[_doctorAddress] = true;
+    }
+
+    function removeDoctor(address _doctorAddress) public onlyAdmin {
+        doctors[_doctorAddress] = false;
     }
 }
