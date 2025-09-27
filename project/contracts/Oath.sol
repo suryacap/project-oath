@@ -342,7 +342,7 @@ contract Oath {
         prescriptions[prescriptionId] = prescription;
         prescriptionCounter++;
         
-        emit PrescriptionCreated(prescriptionId, _patient, msg.sender, _medicineName, _dosage, _quantity, block.timestamp);
+        emit PrescriptionCreated(_patient, msg.sender, prescriptionId, _medicineName, _dosage, _quantity, block.timestamp);
         
         return prescriptionId;
     }
