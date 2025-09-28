@@ -1,4 +1,4 @@
-# OATH - Pharmaceutical Supply Chain Management System
+# OATH - On-chain Authentication of Transactions in Healthcare
 
 A comprehensive blockchain-based pharmaceutical supply chain management system built with React, TypeScript, and Solidity. This system enables secure tracking of pharmaceutical products from manufacturing to patient dispensing, with role-based access control for different stakeholders in the healthcare ecosystem.
 
