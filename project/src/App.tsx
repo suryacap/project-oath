@@ -184,6 +184,44 @@ const PROFILE_DATA = {
       verifiedDate: "2024-01-10",
       documents: ["Insurance License", "State Registration", "Financial Statements", "Compliance Certificate"]
     }
+  },
+  Hospital: {
+    companyName: "City General Hospital",
+    type: "Medical Center",
+    founded: "1995",
+    license: "HOSP-2024-001",
+    certifications: ["JCI Accredited", "HIPAA Compliant", "ISO 9001:2015", "Joint Commission"],
+    specializations: ["Emergency Medicine", "Surgery", "Cardiology", "Oncology", "Pediatrics"],
+    contact: {
+      email: "info@citygeneral.com",
+      phone: "+1-555-0123",
+      address: "123 Medical Center Dr, New York, NY 10001",
+      website: "www.citygeneral.com"
+    },
+    kyc: {
+      status: "verified",
+      verifiedDate: "2024-01-15",
+      documents: ["Hospital License", "Medical Staff Credentials", "Accreditation Certificate", "Emergency Services License"]
+    }
+  },
+  Lab: {
+    companyName: "Precision Diagnostics Lab",
+    type: "Medical Laboratory",
+    founded: "2010",
+    license: "LAB-2024-001",
+    certifications: ["CLIA Certified", "CAP Accredited", "ISO 15189", "HIPAA Compliant"],
+    specializations: ["Clinical Chemistry", "Hematology", "Microbiology", "Pathology", "Molecular Diagnostics"],
+    contact: {
+      email: "info@precisionlab.com",
+      phone: "+1-555-0123",
+      address: "456 Lab Street, Boston, MA 02101",
+      website: "www.precisionlab.com"
+    },
+    kyc: {
+      status: "verified",
+      verifiedDate: "2024-01-20",
+      documents: ["Laboratory License", "CLIA Certificate", "CAP Accreditation", "Quality Management Certificate"]
+    }
   }
 };
 
@@ -722,6 +760,9 @@ const WalletConnectionScreen = ({ onWalletConnect, onPublicSearch }: { onWalletC
         case 'Pharmacy': return Building2;
         case 'Doctor': return User;
         case 'Patient': return Activity;
+        case 'Insurer': return BarChart3;
+        case 'Hospital': return Building2;
+        case 'Lab': return Activity;
         default: return User;
       }
     };
@@ -732,6 +773,9 @@ const WalletConnectionScreen = ({ onWalletConnect, onPublicSearch }: { onWalletC
         case 'Pharmacy': return THEME.SECONDARY;
         case 'Doctor': return THEME.SUCCESS;
         case 'Patient': return THEME.WARNING;
+        case 'Insurer': return '#8B5CF6';
+        case 'Hospital': return '#DC2626';
+        case 'Lab': return '#059669';
         default: return THEME.PRIMARY;
       }
     };
@@ -773,21 +817,19 @@ const WalletConnectionScreen = ({ onWalletConnect, onPublicSearch }: { onWalletC
             <Shield className="w-12 h-12 mr-3" style={{ color: THEME.PRIMARY }} />
             <h1 className="text-4xl font-bold" style={{ color: THEME.PRIMARY }}>OATH</h1>
           </div>
-          <p className="text-xl font-semibold text-gray-700 mb-2">Pharmaceutical Supply Chain</p>
-          <p className="text-gray-600">Connect your wallet to access the secure blockchain portal</p>
+          <p className="text-xl font-semibold text-gray-700 mb-2">On-chain Authentication of Transactions in Healthcare</p>
         </div>
 
         {!isConnected ? (
           <div>
             {/* Available Roles Section */}
             <div className="mb-8">
-              <h3 className="text-2xl font-bold text-gray-800 mb-6 text-center">Select Your Role & Connect</h3>
               <p className="text-center text-gray-600 mb-6">Choose your role and connect your MetaMask wallet to access your portal</p>
               
               {/* Primary Roles - Healthcare Providers */}
               <div className="mb-6">
                 <h4 className="text-lg font-semibold text-gray-700 mb-4 text-center">Healthcare Providers</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                   <button
                     onClick={() => handleConnectWithRole('Manufacturer')}
                     disabled={isConnectingWithRole}
@@ -798,7 +840,7 @@ const WalletConnectionScreen = ({ onWalletConnect, onPublicSearch }: { onWalletC
                     }}
                   >
                     <Factory className="w-10 h-10 mx-auto mb-3" style={{ color: THEME.PRIMARY }} />
-                    <h4 className="font-bold text-gray-800 mb-2 text-lg">Drug Manufacturer</h4>
+                    <h4 className="font-bold text-gray-800 mb-2 text-lg">Manufacturer</h4>
                     <p className="text-sm text-gray-600 mb-3">Create & mint pharmaceutical batches</p>
                     {isConnectingWithRole && selectedRole === 'Manufacturer' ? (
                       <div className="flex items-center justify-center">
@@ -823,28 +865,6 @@ const WalletConnectionScreen = ({ onWalletConnect, onPublicSearch }: { onWalletC
                     <h4 className="font-bold text-gray-800 mb-2 text-lg">Pharmacy</h4>
                     <p className="text-sm text-gray-600 mb-3">Verify & dispense medications</p>
                     {isConnectingWithRole && selectedRole === 'Pharmacy' ? (
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
-                        <span className="text-xs text-gray-600">Connecting...</span>
-                      </div>
-                    ) : (
-                      <div className="text-xs text-gray-500">Click to connect</div>
-                    )}
-                  </button>
-                  
-                  <button
-                    onClick={() => handleConnectWithRole('Doctor')}
-                    disabled={isConnectingWithRole}
-                    className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                    style={{ 
-                      borderColor: THEME.SUCCESS, 
-                      backgroundColor: selectedRole === 'Doctor' ? THEME.SUCCESS + '20' : THEME.SUCCESS + '10'
-                    }}
-                  >
-                    <User className="w-10 h-10 mx-auto mb-3" style={{ color: THEME.SUCCESS }} />
-                    <h4 className="font-bold text-gray-800 mb-2 text-lg">Medical Doctor</h4>
-                    <p className="text-sm text-gray-600 mb-3">Issue prescriptions & access records</p>
-                    {isConnectingWithRole && selectedRole === 'Doctor' ? (
                       <div className="flex items-center justify-center">
                         <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
                         <span className="text-xs text-gray-600">Connecting...</span>
@@ -895,6 +915,78 @@ const WalletConnectionScreen = ({ onWalletConnect, onPublicSearch }: { onWalletC
                     <h4 className="font-bold text-gray-800 mb-2 text-lg">Insurance Provider</h4>
                     <p className="text-sm text-gray-600 mb-3">Access patient data & analytics</p>
                     {isConnectingWithRole && selectedRole === 'Insurer' ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                        <span className="text-xs text-gray-600">Connecting...</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">Click to connect</div>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Healthcare Facilities */}
+              <div className="mb-6">
+                <h4 className="text-lg font-semibold text-gray-700 mb-4 text-center">Healthcare Facilities</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                  <button
+                    onClick={() => handleConnectWithRole('Hospital')}
+                    disabled={isConnectingWithRole}
+                    className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ 
+                      borderColor: '#DC2626', 
+                      backgroundColor: selectedRole === 'Hospital' ? '#DC2626' + '20' : '#DC2626' + '10'
+                    }}
+                  >
+                    <Building2 className="w-10 h-10 mx-auto mb-3" style={{ color: '#DC2626' }} />
+                    <h4 className="font-bold text-gray-800 mb-2 text-lg">Hospital</h4>
+                    <p className="text-sm text-gray-600 mb-3">Upload patient reports & medical records</p>
+                    {isConnectingWithRole && selectedRole === 'Hospital' ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                        <span className="text-xs text-gray-600">Connecting...</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">Click to connect</div>
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => handleConnectWithRole('Lab')}
+                    disabled={isConnectingWithRole}
+                    className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                    style={{ 
+                      borderColor: '#059669', 
+                      backgroundColor: selectedRole === 'Lab' ? '#059669' + '20' : '#059669' + '10'
+                    }}
+                  >
+                    <Activity className="w-10 h-10 mx-auto mb-3" style={{ color: '#059669' }} />
+                    <h4 className="font-bold text-gray-800 mb-2 text-lg">Laboratory</h4>
+                    <p className="text-sm text-gray-600 mb-3">Upload test results & lab reports</p>
+                    {isConnectingWithRole && selectedRole === 'Lab' ? (
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
+                        <span className="text-xs text-gray-600">Connecting...</span>
+                      </div>
+                    ) : (
+                      <div className="text-xs text-gray-500">Click to connect</div>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => handleConnectWithRole('Doctor')}
+                    disabled={isConnectingWithRole}
+                    className="p-6 rounded-xl border-2 border-opacity-20 text-center transition-all duration-300 hover:scale-105 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed sm:col-span-2 lg:col-span-1"
+                    style={{ 
+                      borderColor: THEME.SUCCESS, 
+                      backgroundColor: selectedRole === 'Doctor' ? THEME.SUCCESS + '20' : THEME.SUCCESS + '10'
+                    }}
+                  >
+                    <User className="w-10 h-10 mx-auto mb-3" style={{ color: THEME.SUCCESS }} />
+                    <h4 className="font-bold text-gray-800 mb-2 text-lg">Doctor</h4>
+                    <p className="text-sm text-gray-600 mb-3">Issue prescriptions & access records</p>
+                    {isConnectingWithRole && selectedRole === 'Doctor' ? (
                       <div className="flex items-center justify-center">
                         <div className="animate-spin w-4 h-4 mr-2 border-2 border-gray-400 border-t-transparent rounded-full"></div>
                         <span className="text-xs text-gray-600">Connecting...</span>
@@ -1446,7 +1538,6 @@ const ManufacturerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole:
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
   const [, setUserRole] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   // Set up global profile handler
   React.useEffect(() => {
@@ -1459,7 +1550,6 @@ const ManufacturerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole:
 
   const handleDirectWalletConnect = async () => {
     setIsConnecting(true);
-    setConnectionError(null);
     
     try {
       // Add timeout to prevent infinite loading
@@ -1495,7 +1585,7 @@ const ManufacturerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole:
       setUserRole(role);
     } catch (error: any) {
       console.error('Error connecting wallet:', error);
-      setConnectionError(error.message || 'Failed to connect wallet. Please make sure MetaMask is installed and unlocked.');
+      alert(error.message || 'Failed to connect wallet. Please make sure MetaMask is installed and unlocked.');
     } finally {
       setIsConnecting(false);
     }
@@ -1569,14 +1659,6 @@ const ManufacturerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole:
                 <p className="text-gray-600">Connect to Sepolia testnet to access manufacturer features</p>
               </div>
               
-              {connectionError && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-center">
-                    <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
-                    <span className="text-red-700 text-sm">{connectionError}</span>
-                  </div>
-                </div>
-              )}
 
               
               <button
@@ -1682,7 +1764,6 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
   const [showProfile, setShowProfile] = useState(false);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [dispenseResult, setDispenseResult] = useState<{ transactionHash: string } | null>(null);
 
   // Set up global profile handler
@@ -1695,7 +1776,6 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
 
   const handleDirectWalletConnect = async () => {
     setIsConnecting(true);
-    setConnectionError(null);
     
     try {
       // Add timeout to prevent infinite loading
@@ -1721,7 +1801,7 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
       setConnectedAddress(address);
     } catch (error: any) {
       console.error('Error connecting wallet:', error);
-      setConnectionError(error.message || 'Failed to connect wallet. Please make sure MetaMask is installed and unlocked.');
+      alert(error.message || 'Failed to connect wallet. Please make sure MetaMask is installed and unlocked.');
     } finally {
       setIsConnecting(false);
     }
@@ -1916,14 +1996,6 @@ const PharmacyPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (ro
                 <p className="text-gray-600">Connect to Sepolia testnet to access pharmacy features</p>
               </div>
               
-              {connectionError && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-center">
-                    <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
-                    <span className="text-red-700 text-sm">{connectionError}</span>
-                  </div>
-                </div>
-              )}
               
               <button
                 onClick={handleDirectWalletConnect}
@@ -2130,7 +2202,6 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
   const [showProfile, setShowProfile] = useState(false);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isPrescribing, setIsPrescribing] = useState(false);
   const [prescriptionResult, setPrescriptionResult] = useState<{ prescriptionId: string; transactionHash: string } | null>(null);
   const [realPrescriptions, setRealPrescriptions] = useState<any[]>([]);
@@ -2146,7 +2217,6 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
 
   const handleDirectWalletConnect = async () => {
     setIsConnecting(true);
-    setConnectionError(null);
     
     try {
       // Add timeout to prevent infinite loading
@@ -2175,7 +2245,7 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
       await loadDoctorPrescriptions(address);
     } catch (error: any) {
       console.error('Error connecting wallet:', error);
-      setConnectionError(error.message || 'Failed to connect wallet. Please make sure MetaMask is installed and unlocked.');
+      alert(error.message || 'Failed to connect wallet. Please make sure MetaMask is installed and unlocked.');
     } finally {
       setIsConnecting(false);
     }
@@ -2384,14 +2454,6 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
                 <p className="text-gray-600">Connect to Sepolia testnet to access doctor features</p>
               </div>
               
-              {connectionError && (
-                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="flex items-center">
-                    <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
-                    <span className="text-red-700 text-sm">{connectionError}</span>
-                  </div>
-                </div>
-              )}
               
               <button
                 onClick={handleDirectWalletConnect}
@@ -2536,6 +2598,7 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
                   </span>
                 </div>
                 
+                
                 <div className="space-y-4 max-h-96 overflow-y-auto">
                   {isLoadingPrescriptions ? (
                     <div className="flex items-center justify-center py-8">
@@ -2563,6 +2626,7 @@ const DoctorPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role
             </div>
           </div>
         )}
+
       </div>
 
       {showProfile && (
@@ -2590,8 +2654,9 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
   const [isLoadingPrescriptions, setIsLoadingPrescriptions] = useState(false);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isBiometricRegistered, setIsBiometricRegistered] = useState(false);
+  const [showBiometricAuth, setShowBiometricAuth] = useState(false);
 
   // Set up global profile handler
   React.useEffect(() => {
@@ -2697,7 +2762,6 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
 
   const handleDirectWalletConnect = async () => {
     setIsConnecting(true);
-    setConnectionError(null);
     
     try {
       const address = await contractService.connectWallet();
@@ -2712,7 +2776,7 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
       await loadPatientPrescriptions(address);
     } catch (error: any) {
       console.error('Error connecting wallet:', error);
-      setConnectionError(error.message || 'Failed to connect wallet. Please make sure MetaMask is installed and unlocked.');
+      alert(error.message || 'Failed to connect wallet. Please make sure MetaMask is installed and unlocked.');
     } finally {
       setIsConnecting(false);
     }
@@ -2833,7 +2897,7 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
       <Header title="Patient Portal" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
       
       <div className="max-w-7xl mx-auto p-4 sm:p-8">
-        <div className="grid lg:grid-cols-5 gap-8">
+        <div className="grid lg:grid-cols-4 gap-8">
           {/* Biometric Authentication Panel */}
           <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-xl">
             <div className="flex items-center mb-6">
@@ -2976,7 +3040,7 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
           </div>
 
           {/* Traceability Timeline */}
-          <div className="lg:col-span-3 bg-white p-8 rounded-2xl shadow-xl">
+          <div className="lg:col-span-2 bg-white p-8 rounded-2xl shadow-xl">
             <div className="flex items-center mb-8">
               <Clock className="w-8 h-8 mr-3" style={{ color: THEME.PRIMARY }} />
               <div>
@@ -2984,6 +3048,8 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
                 <p className="text-gray-600">Complete traceability of your medical journey</p>
               </div>
             </div>
+
+
 
             <div className="relative">
               {isLoadingPrescriptions && connectedAddress ? (
@@ -3048,8 +3114,1035 @@ const PatientPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (rol
 
       {showProfile && (
         <Profile
+          role="Patient"
+          profileData={PROFILE_DATA.Patient}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
+
+      {showBiometricAuth && (
+        <BiometricAuth
+          onSuccess={handleBiometricSuccess}
+          onClose={() => setShowBiometricAuth(false)}
+          mode="register"
+        />
+      )}
+    </div>
+  );
+};
+
+// Insurer Portal Components
+const InsurerPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role: string | null) => void; walletAddress?: string; onDisconnect?: () => void }) => {
+  const [showProfile, setShowProfile] = useState(false);
+  const [analyticsData, setAnalyticsData] = useState<any[]>([]);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  // Set up global profile handler
+  React.useEffect(() => {
+    window.showProfile = () => setShowProfile(true);
+    return () => {
+      delete window.showProfile;
+    };
+  }, []);
+
+  const loadAnalyticsData = async () => {
+    setIsLoadingAnalytics(true);
+    setLoadError(null);
+    
+    try {
+      // Simulate loading analytics data
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const mockAnalyticsData = [
+        {
+          id: '1',
+          patientId: 'P001',
+          patientName: 'John Smith',
+          prescriptionCount: 5,
+          totalCost: 250.00,
+          insuranceCoverage: 200.00,
+          outOfPocket: 50.00,
+          lastClaim: '2024-01-15',
+          status: 'Active'
+        },
+        {
+          id: '2',
+          patientId: 'P002',
+          patientName: 'Sarah Johnson',
+          prescriptionCount: 3,
+          totalCost: 180.00,
+          insuranceCoverage: 144.00,
+          outOfPocket: 36.00,
+          lastClaim: '2024-01-14',
+          status: 'Active'
+        },
+        {
+          id: '3',
+          patientId: 'P003',
+          patientName: 'Michael Brown',
+          prescriptionCount: 7,
+          totalCost: 420.00,
+          insuranceCoverage: 336.00,
+          outOfPocket: 84.00,
+          lastClaim: '2024-01-13',
+          status: 'Pending Review'
+        }
+      ];
+      
+      setAnalyticsData(mockAnalyticsData);
+    } catch (error) {
+      console.error('Error loading analytics data:', error);
+      setLoadError('Failed to load analytics data. Please try again.');
+    } finally {
+      setIsLoadingAnalytics(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (walletAddress) {
+      loadAnalyticsData();
+    }
+  }, [walletAddress]);
+
+  const AnalyticsCard = ({ data }: { data: any }) => (
+    <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center">
+          <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mr-4">
+            <User className="w-6 h-6 text-purple-600" />
+          </div>
+          <div>
+            <h3 className="font-bold text-gray-800 text-lg">{data.patientName}</h3>
+            <p className="text-sm text-gray-600">Patient ID: {data.patientId}</p>
+          </div>
+        </div>
+        <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+          data.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+        }`}>
+          {data.status}
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="bg-gray-50 rounded-lg p-3">
+          <p className="text-xs text-gray-500 mb-1">Prescriptions</p>
+          <p className="font-bold text-lg text-gray-800">{data.prescriptionCount}</p>
+        </div>
+        <div className="bg-gray-50 rounded-lg p-3">
+          <p className="text-xs text-gray-500 mb-1">Total Cost</p>
+          <p className="font-bold text-lg text-gray-800">${data.totalCost.toFixed(2)}</p>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="bg-green-50 rounded-lg p-3">
+          <p className="text-xs text-green-600 mb-1">Insurance Coverage</p>
+          <p className="font-bold text-lg text-green-700">${data.insuranceCoverage.toFixed(2)}</p>
+        </div>
+        <div className="bg-orange-50 rounded-lg p-3">
+          <p className="text-xs text-orange-600 mb-1">Out of Pocket</p>
+          <p className="font-bold text-lg text-orange-700">${data.outOfPocket.toFixed(2)}</p>
+        </div>
+      </div>
+      
+      <div className="pt-3 border-t border-gray-200">
+        <p className="text-xs text-gray-500">Last Claim: {data.lastClaim}</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header title="Insurance Provider Portal" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Analytics Overview */}
+        <div className="mb-8">
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <BarChart3 className="w-8 h-8 mr-3 text-purple-600" />
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">Patient Analytics</h2>
+                  <p className="text-gray-600">Insurance coverage and cost analysis</p>
+                </div>
+              </div>
+              <button
+                onClick={loadAnalyticsData}
+                disabled={isLoadingAnalytics}
+                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200 disabled:opacity-50 flex items-center"
+              >
+                {isLoadingAnalytics ? (
+                  <>
+                    <div className="animate-spin w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <Activity className="w-4 h-4 mr-2" />
+                    Refresh Data
+                  </>
+                )}
+              </button>
+            </div>
+            
+            {loadError && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-700 text-sm">{loadError}</p>
+              </div>
+            )}
+            
+            {isLoadingAnalytics ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin w-8 h-8 border-4 border-purple-600 border-t-transparent rounded-full"></div>
+                <span className="ml-3 text-gray-600">Loading analytics data...</span>
+              </div>
+            ) : analyticsData.length > 0 ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {analyticsData.map((data) => (
+                  <AnalyticsCard key={data.id} data={data} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <BarChart3 className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-600 mb-2">No Analytics Data</h3>
+                <p className="text-gray-500">No patient analytics data available at the moment.</p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <FileText className="w-8 h-8 text-blue-600 mr-3" />
+              <h3 className="text-lg font-bold text-gray-800">Claims Processing</h3>
+            </div>
+            <p className="text-gray-600 mb-4">Review and process insurance claims</p>
+            <button className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+              View Claims
+            </button>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <Database className="w-8 h-8 text-green-600 mr-3" />
+              <h3 className="text-lg font-bold text-gray-800">Patient Records</h3>
+            </div>
+            <p className="text-gray-600 mb-4">Access patient medical records</p>
+            <button className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200">
+              Access Records
+            </button>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <BarChart3 className="w-8 h-8 text-purple-600 mr-3" />
+              <h3 className="text-lg font-bold text-gray-800">Cost Analysis</h3>
+            </div>
+            <p className="text-gray-600 mb-4">Analyze healthcare costs and trends</p>
+            <button className="w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors duration-200">
+              View Analysis
+            </button>
+          </div>
+        </div>
+
+      </div>
+      
+      {showProfile && (
+        <Profile
           role="Insurer"
           profileData={PROFILE_DATA.Insurer}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+// Hospital Portal Components
+const HospitalPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role: string | null) => void; walletAddress?: string; onDisconnect?: () => void }) => {
+  const [showProfile, setShowProfile] = useState(false);
+  const [patientReports, setPatientReports] = useState<any[]>([]);
+  const [isLoadingReports, setIsLoadingReports] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadForm, setUploadForm] = useState({
+    patientENS: '',
+    reportType: '',
+    reportTitle: '',
+    reportContent: '',
+    doctorName: '',
+    date: '',
+    urgency: 'normal'
+  });
+
+  // Set up global profile handler
+  React.useEffect(() => {
+    window.showProfile = () => setShowProfile(true);
+    return () => {
+      delete window.showProfile;
+    };
+  }, []);
+
+  const loadPatientReports = async () => {
+    setIsLoadingReports(true);
+    
+    try {
+      // Simulate loading patient reports
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const mockReports = [
+        {
+          id: '1',
+          patientENS: 'john.smith.eth',
+          patientName: 'John Smith',
+          reportType: 'Emergency Report',
+          reportTitle: 'Emergency Room Visit - Chest Pain',
+          doctorName: 'Dr. Sarah Johnson',
+          date: '2024-01-15',
+          urgency: 'critical',
+          content: 'Patient presented with severe chest pain. ECG showed ST elevation. Immediate cardiac intervention performed.',
+          status: 'Completed'
+        },
+        {
+          id: '2',
+          patientENS: 'jane.doe.eth',
+          patientName: 'Jane Doe',
+          reportType: 'Surgery Report',
+          reportTitle: 'Appendectomy Surgery',
+          doctorName: 'Dr. Michael Brown',
+          date: '2024-01-14',
+          urgency: 'normal',
+          content: 'Successful laparoscopic appendectomy. Patient recovered well with no complications.',
+          status: 'Completed'
+        }
+      ];
+      
+      setPatientReports(mockReports);
+    } catch (error) {
+      console.error('Error loading reports:', error);
+    } finally {
+      setIsLoadingReports(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (walletAddress) {
+      loadPatientReports();
+    }
+  }, [walletAddress]);
+
+  const handleUploadReport = async () => {
+    if (!uploadForm.patientENS || !uploadForm.reportType || !uploadForm.reportTitle) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      // Simulate uploading report
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const newReport = {
+        id: Date.now().toString(),
+        ...uploadForm,
+        patientName: uploadForm.patientENS.split('.')[0] + ' ' + uploadForm.patientENS.split('.')[1],
+        status: 'Uploaded',
+        uploadedBy: 'Hospital Staff',
+        uploadedAt: new Date().toISOString()
+      };
+      
+      setPatientReports(prev => [newReport, ...prev]);
+      setShowUploadModal(false);
+      setUploadForm({
+        patientENS: '',
+        reportType: '',
+        reportTitle: '',
+        reportContent: '',
+        doctorName: '',
+        date: '',
+        urgency: 'normal'
+      });
+      
+      alert('Report uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading report:', error);
+      alert('Failed to upload report. Please try again.');
+    }
+  };
+
+  const ReportCard = ({ report }: { report: any }) => (
+    <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center">
+          <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mr-4">
+            <FileText className="w-6 h-6 text-red-600" />
+          </div>
+          <div>
+            <h3 className="font-bold text-gray-800 text-lg">{report.reportTitle}</h3>
+            <p className="text-sm text-gray-600">Patient: {report.patientName} ({report.patientENS})</p>
+          </div>
+        </div>
+        <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+          report.urgency === 'critical' ? 'bg-red-100 text-red-800' : 
+          report.urgency === 'high' ? 'bg-orange-100 text-orange-800' : 
+          'bg-green-100 text-green-800'
+        }`}>
+          {report.urgency.toUpperCase()}
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="bg-gray-50 rounded-lg p-3">
+          <p className="text-xs text-gray-500 mb-1">Report Type</p>
+          <p className="font-bold text-lg text-gray-800">{report.reportType}</p>
+        </div>
+        <div className="bg-gray-50 rounded-lg p-3">
+          <p className="text-xs text-gray-500 mb-1">Doctor</p>
+          <p className="font-bold text-lg text-gray-800">{report.doctorName}</p>
+        </div>
+      </div>
+      
+      <div className="mb-4">
+        <p className="text-sm text-gray-600 mb-2">Report Content:</p>
+        <p className="text-gray-800 bg-gray-50 rounded-lg p-3 text-sm">{report.content}</p>
+      </div>
+      
+      <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
+        <p className="text-xs text-gray-500">Date: {report.date}</p>
+        <div className={`px-2 py-1 rounded text-xs font-medium ${
+          report.status === 'Completed' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+        }`}>
+          {report.status}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header title="Hospital Portal" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Reports Overview */}
+        <div className="mb-8">
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <Building2 className="w-8 h-8 mr-3 text-red-600" />
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">Patient Reports</h2>
+                  <p className="text-gray-600">Upload and manage patient medical reports</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={loadPatientReports}
+                  disabled={isLoadingReports}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 flex items-center"
+                >
+                  {isLoadingReports ? (
+                    <>
+                      <div className="animate-spin w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <Activity className="w-4 h-4 mr-2" />
+                      Refresh
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200 flex items-center"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Report
+                </button>
+              </div>
+            </div>
+            
+            {isLoadingReports ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin w-8 h-8 border-4 border-red-600 border-t-transparent rounded-full"></div>
+                <span className="ml-3 text-gray-600">Loading reports...</span>
+              </div>
+            ) : patientReports.length > 0 ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {patientReports.map((report) => (
+                  <ReportCard key={report.id} report={report} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <FileText className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-600 mb-2">No Reports Found</h3>
+                <p className="text-gray-500">No patient reports available at the moment.</p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <User className="w-8 h-8 text-blue-600 mr-3" />
+              <h3 className="text-lg font-bold text-gray-800">Patient Lookup</h3>
+            </div>
+            <p className="text-gray-600 mb-4">Search for patient records by ENS</p>
+            <button className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+              Search Patients
+            </button>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <AlertTriangle className="w-8 h-8 text-orange-600 mr-3" />
+              <h3 className="text-lg font-bold text-gray-800">Emergency Access</h3>
+            </div>
+            <p className="text-gray-600 mb-4">Access patient data in emergency situations</p>
+            <button className="w-full py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors duration-200">
+              Emergency Access
+            </button>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <Database className="w-8 h-8 text-green-600 mr-3" />
+              <h3 className="text-lg font-bold text-gray-800">Medical Records</h3>
+            </div>
+            <p className="text-gray-600 mb-4">View comprehensive patient medical history</p>
+            <button className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200">
+              View Records
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-800">Upload Patient Report</h3>
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Patient ENS *</label>
+                <input
+                  type="text"
+                  value={uploadForm.patientENS}
+                  onChange={(e) => setUploadForm(prev => ({ ...prev, patientENS: e.target.value }))}
+                  placeholder="e.g., john.smith.eth"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Report Type *</label>
+                  <select
+                    value={uploadForm.reportType}
+                    onChange={(e) => setUploadForm(prev => ({ ...prev, reportType: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  >
+                    <option value="">Select Type</option>
+                    <option value="Emergency Report">Emergency Report</option>
+                    <option value="Surgery Report">Surgery Report</option>
+                    <option value="Diagnosis Report">Diagnosis Report</option>
+                    <option value="Treatment Report">Treatment Report</option>
+                    <option value="Discharge Summary">Discharge Summary</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Urgency</label>
+                  <select
+                    value={uploadForm.urgency}
+                    onChange={(e) => setUploadForm(prev => ({ ...prev, urgency: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                  >
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Report Title *</label>
+                <input
+                  type="text"
+                  value={uploadForm.reportTitle}
+                  onChange={(e) => setUploadForm(prev => ({ ...prev, reportTitle: e.target.value }))}
+                  placeholder="Enter report title"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Doctor Name</label>
+                <input
+                  type="text"
+                  value={uploadForm.doctorName}
+                  onChange={(e) => setUploadForm(prev => ({ ...prev, doctorName: e.target.value }))}
+                  placeholder="Enter doctor name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                <input
+                  type="date"
+                  value={uploadForm.date}
+                  onChange={(e) => setUploadForm(prev => ({ ...prev, date: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Report Content</label>
+                <textarea
+                  value={uploadForm.reportContent}
+                  onChange={(e) => setUploadForm(prev => ({ ...prev, reportContent: e.target.value }))}
+                  placeholder="Enter detailed report content..."
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUploadReport}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
+              >
+                Upload Report
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {showProfile && (
+        <Profile
+          role="Hospital"
+          profileData={PROFILE_DATA.Hospital}
+          onClose={() => setShowProfile(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+// Lab Portal Components
+const LabPortal = ({ setRole, walletAddress, onDisconnect }: { setRole: (role: string | null) => void; walletAddress?: string; onDisconnect?: () => void }) => {
+  const [showProfile, setShowProfile] = useState(false);
+  const [labResults, setLabResults] = useState<any[]>([]);
+  const [isLoadingResults, setIsLoadingResults] = useState(false);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadForm, setUploadForm] = useState({
+    patientENS: '',
+    testType: '',
+    testName: '',
+    results: '',
+    normalRange: '',
+    technicianName: '',
+    date: '',
+    status: 'completed'
+  });
+
+  // Set up global profile handler
+  React.useEffect(() => {
+    window.showProfile = () => setShowProfile(true);
+    return () => {
+      delete window.showProfile;
+    };
+  }, []);
+
+  const loadLabResults = async () => {
+    setIsLoadingResults(true);
+    
+    try {
+      // Simulate loading lab results
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const mockResults = [
+        {
+          id: '1',
+          patientENS: 'john.smith.eth',
+          patientName: 'John Smith',
+          testType: 'Blood Test',
+          testName: 'Complete Blood Count (CBC)',
+          results: 'WBC: 7.2, RBC: 4.5, Hemoglobin: 14.2, Platelets: 250',
+          normalRange: 'WBC: 4.0-11.0, RBC: 4.0-5.5, Hemoglobin: 12.0-16.0, Platelets: 150-450',
+          technicianName: 'Sarah Wilson',
+          date: '2024-01-15',
+          status: 'completed'
+        },
+        {
+          id: '2',
+          patientENS: 'jane.doe.eth',
+          patientName: 'Jane Doe',
+          testType: 'Urine Test',
+          testName: 'Urinalysis',
+          results: 'Color: Yellow, Clarity: Clear, pH: 6.5, Protein: Negative, Glucose: Negative',
+          normalRange: 'Color: Yellow, Clarity: Clear, pH: 4.5-8.0, Protein: Negative, Glucose: Negative',
+          technicianName: 'Mike Johnson',
+          date: '2024-01-14',
+          status: 'completed'
+        }
+      ];
+      
+      setLabResults(mockResults);
+    } catch (error) {
+      console.error('Error loading results:', error);
+    } finally {
+      setIsLoadingResults(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (walletAddress) {
+      loadLabResults();
+    }
+  }, [walletAddress]);
+
+  const handleUploadResult = async () => {
+    if (!uploadForm.patientENS || !uploadForm.testType || !uploadForm.testName) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    try {
+      // Simulate uploading result
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const newResult = {
+        id: Date.now().toString(),
+        ...uploadForm,
+        patientName: uploadForm.patientENS.split('.')[0] + ' ' + uploadForm.patientENS.split('.')[1],
+        uploadedBy: 'Lab Technician',
+        uploadedAt: new Date().toISOString()
+      };
+      
+      setLabResults(prev => [newResult, ...prev]);
+      setShowUploadModal(false);
+      setUploadForm({
+        patientENS: '',
+        testType: '',
+        testName: '',
+        results: '',
+        normalRange: '',
+        technicianName: '',
+        date: '',
+        status: 'completed'
+      });
+      
+      alert('Lab result uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading result:', error);
+      alert('Failed to upload result. Please try again.');
+    }
+  };
+
+  const ResultCard = ({ result }: { result: any }) => (
+    <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 border border-gray-100">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center">
+          <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center mr-4">
+            <Activity className="w-6 h-6 text-green-600" />
+          </div>
+          <div>
+            <h3 className="font-bold text-gray-800 text-lg">{result.testName}</h3>
+            <p className="text-sm text-gray-600">Patient: {result.patientName} ({result.patientENS})</p>
+          </div>
+        </div>
+        <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+          result.status === 'completed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+        }`}>
+          {result.status.toUpperCase()}
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-4 mb-4">
+        <div className="bg-gray-50 rounded-lg p-3">
+          <p className="text-xs text-gray-500 mb-1">Test Type</p>
+          <p className="font-bold text-lg text-gray-800">{result.testType}</p>
+        </div>
+        <div className="bg-gray-50 rounded-lg p-3">
+          <p className="text-xs text-gray-500 mb-1">Technician</p>
+          <p className="font-bold text-lg text-gray-800">{result.technicianName}</p>
+        </div>
+      </div>
+      
+      <div className="mb-4">
+        <p className="text-sm text-gray-600 mb-2">Test Results:</p>
+        <p className="text-gray-800 bg-gray-50 rounded-lg p-3 text-sm mb-2">{result.results}</p>
+        <p className="text-sm text-gray-600 mb-1">Normal Range:</p>
+        <p className="text-gray-700 bg-green-50 rounded-lg p-3 text-sm">{result.normalRange}</p>
+      </div>
+      
+      <div className="pt-3 border-t border-gray-200">
+        <p className="text-xs text-gray-500">Date: {result.date}</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header title="Laboratory Portal" setRole={setRole} walletAddress={walletAddress} onDisconnect={onDisconnect} />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Lab Results Overview */}
+        <div className="mb-8">
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <Activity className="w-8 h-8 mr-3 text-green-600" />
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-800">Lab Results</h2>
+                  <p className="text-gray-600">Upload and manage laboratory test results</p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={loadLabResults}
+                  disabled={isLoadingResults}
+                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-200 disabled:opacity-50 flex items-center"
+                >
+                  {isLoadingResults ? (
+                    <>
+                      <div className="animate-spin w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full"></div>
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <Activity className="w-4 h-4 mr-2" />
+                      Refresh
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 flex items-center"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Result
+                </button>
+              </div>
+            </div>
+            
+            {isLoadingResults ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full"></div>
+                <span className="ml-3 text-gray-600">Loading results...</span>
+              </div>
+            ) : labResults.length > 0 ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {labResults.map((result) => (
+                  <ResultCard key={result.id} result={result} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <Activity className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-medium text-gray-600 mb-2">No Results Found</h3>
+                <p className="text-gray-500">No lab results available at the moment.</p>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <User className="w-8 h-8 text-blue-600 mr-3" />
+              <h3 className="text-lg font-bold text-gray-800">Patient Lookup</h3>
+            </div>
+            <p className="text-gray-600 mb-4">Search for patient records by ENS</p>
+            <button className="w-full py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200">
+              Search Patients
+            </button>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <AlertTriangle className="w-8 h-8 text-orange-600 mr-3" />
+              <h3 className="text-lg font-bold text-gray-800">Emergency Access</h3>
+            </div>
+            <p className="text-gray-600 mb-4">Access patient data in emergency situations</p>
+            <button className="w-full py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors duration-200">
+              Emergency Access
+            </button>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300">
+            <div className="flex items-center mb-4">
+              <Database className="w-8 h-8 text-green-600 mr-3" />
+              <h3 className="text-lg font-bold text-gray-800">Test History</h3>
+            </div>
+            <p className="text-gray-600 mb-4">View patient test history and trends</p>
+            <button className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200">
+              View History
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-gray-800">Upload Lab Result</h3>
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XCircle className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Patient ENS *</label>
+                <input
+                  type="text"
+                  value={uploadForm.patientENS}
+                  onChange={(e) => setUploadForm(prev => ({ ...prev, patientENS: e.target.value }))}
+                  placeholder="e.g., john.smith.eth"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Test Type *</label>
+                  <select
+                    value={uploadForm.testType}
+                    onChange={(e) => setUploadForm(prev => ({ ...prev, testType: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="">Select Type</option>
+                    <option value="Blood Test">Blood Test</option>
+                    <option value="Urine Test">Urine Test</option>
+                    <option value="Imaging">Imaging</option>
+                    <option value="Biopsy">Biopsy</option>
+                    <option value="Culture">Culture</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                  <select
+                    value={uploadForm.status}
+                    onChange={(e) => setUploadForm(prev => ({ ...prev, status: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                    <option value="reviewed">Reviewed</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Test Name *</label>
+                <input
+                  type="text"
+                  value={uploadForm.testName}
+                  onChange={(e) => setUploadForm(prev => ({ ...prev, testName: e.target.value }))}
+                  placeholder="Enter test name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Technician Name</label>
+                <input
+                  type="text"
+                  value={uploadForm.technicianName}
+                  onChange={(e) => setUploadForm(prev => ({ ...prev, technicianName: e.target.value }))}
+                  placeholder="Enter technician name"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+                <input
+                  type="date"
+                  value={uploadForm.date}
+                  onChange={(e) => setUploadForm(prev => ({ ...prev, date: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Test Results</label>
+                <textarea
+                  value={uploadForm.results}
+                  onChange={(e) => setUploadForm(prev => ({ ...prev, results: e.target.value }))}
+                  placeholder="Enter test results..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Normal Range</label>
+                <textarea
+                  value={uploadForm.normalRange}
+                  onChange={(e) => setUploadForm(prev => ({ ...prev, normalRange: e.target.value }))}
+                  placeholder="Enter normal range values..."
+                  rows={2}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+            </div>
+            
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => setShowUploadModal(false)}
+                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUploadResult}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+              >
+                Upload Result
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {showProfile && (
+        <Profile
+          role="Lab"
+          profileData={PROFILE_DATA.Lab}
           onClose={() => setShowProfile(false)}
         />
       )}
@@ -3353,6 +4446,10 @@ const App = () => {
         return (props: any) => <PatientPortal {...props} walletAddress={connectedWallet} onDisconnect={handleDisconnect} />;
       case 'Insurer':
         return (props: any) => <InsurerPortal {...props} walletAddress={connectedWallet} onDisconnect={handleDisconnect} />;
+      case 'Hospital':
+        return (props: any) => <HospitalPortal {...props} walletAddress={connectedWallet} onDisconnect={handleDisconnect} />;
+      case 'Lab':
+        return (props: any) => <LabPortal {...props} walletAddress={connectedWallet} onDisconnect={handleDisconnect} />;
       default:
         return () => <WalletConnectionScreen onWalletConnect={handleWalletConnect} onPublicSearch={() => setShowPublicSearch(true)} />;
     }
